@@ -20,7 +20,7 @@ is
    begin
       Dropped := Is_Full (Q);
       if Dropped then
-         --  Overwrite the oldest: advance Head past it, Fill unchanged.
+         --  Overwrite the oldest element: move Head past it. Fill does not change.
          Q.Head := Next (Q.Head);
          Q.Buffer (Q.Tail) := Item;
          Q.Tail := Next (Q.Tail);

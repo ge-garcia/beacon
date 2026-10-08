@@ -1,34 +1,35 @@
 --  Beacon: typed publish-subscribe messaging.
 --
---  Package map (dependencies point downward only):
+--  Package map. Each package depends only on the packages below it.
 --
---     Beacon.Topic  (generic)      typed Publisher/Subscriber, protected queue, static registry
+--     Beacon.Topic  (generic)      typed Publisher and Subscriber, protected queue, registry
 --          |
---     Beacon.Queue  (generic)      pure bounded ring buffer            [SPARK proof target]
+--     Beacon.Queue  (generic)      bounded ring buffer, no tasking     [SPARK proof target]
 --
---     -- src/net/, desktop only, never referenced by the two above --
+--     -- src/net/: desktop only. The two packages above never refer to these. --
 --
---     Beacon.Bridge (generic)      links one Topic instance to a Transport
+--     Beacon.Bridge (generic)      connects one Topic instance to a Transport
 --          |              |
---     Beacon.Wire      Beacon.Transport         frame header (rep clauses)   send/receive interface
+--     Beacon.Wire      Beacon.Transport         frame header (rep clause)   Send/Receive interface
 --                          |
---                      Beacon.Transport.UDP     GNAT.Sockets multicast
+--                      Beacon.Transport.UDP     UDP multicast (GNAT.Sockets)
 --
 --  The design rules are listed in README.md. Comments refer to them by number.
 --
---  Design rule 1: a message type never crosses the public API as bytes.
---  Bytes exist only inside Beacon.Wire and Beacon.Bridge, and only on
---  their way to or from a socket.
+--  Design rule 1: a message never crosses the public API as bytes.
+--  Only Beacon.Wire and Beacon.Bridge use bytes, and only to send a
+--  frame to a socket or to read a frame from a socket.
 
 package Beacon
   with Pure, SPARK_Mode => On
 is
 
-   --  Design rule 2: delivery mode is part of the subscriber's type.
-   --    Reliable    a full queue blocks the publisher (or Try_Publish
-   --                reports it). Nothing is ever dropped.
-   --    Best_Effort a full queue drops the OLDEST queued message to make
-   --                room. Drops are counted and observable.
+   --  Design rule 2: the delivery mode is part of the subscriber type.
+   --    Reliable     When the queue is full, Publish blocks and
+   --                 Try_Publish reports the refusal. No message is ever
+   --                 dropped.
+   --    Best_Effort  When the queue is full, the OLDEST message is dropped
+   --                 to make room. Dropped counts each drop.
    type Delivery_Mode is (Reliable, Best_Effort);
 
 end Beacon;

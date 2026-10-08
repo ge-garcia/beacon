@@ -1,15 +1,15 @@
---  Telemetry.Codecs: Serialize/Deserialize per message type, for the
---  bridge. Desktop only (withs Beacon.Wire).
+--  Telemetry.Codecs: Serialize and Deserialize for each message type, for
+--  the bridge. Desktop only (this package withs Beacon.Wire).
 --
---  Each pair is an overlay of the rep-claused record onto a Byte_Array
---  of exactly Reading'Size / 8 bytes. If you find yourself writing
---  shifts and masks here, stop.
+--  Each pair puts an overlay of the record (which has a representation
+--  clause) on a Byte_Array of exactly Reading'Size / 8 bytes. Do not use
+--  shifts and masks here.
 
 with Beacon.Wire;
 
 package Telemetry.Codecs is
 
-   Reading_Bytes : constant := 9;  --  Reading'Size / 8; the rep clause fixes it at 72 bits
+   Reading_Bytes : constant := 9;  --  Reading'Size / 8. The rep clause sets 72 bits.
 
    procedure Serialize_Reading
      (Msg    : Reading;

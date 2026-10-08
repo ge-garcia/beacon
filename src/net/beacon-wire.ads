@@ -1,22 +1,23 @@
 --  Beacon.Wire: frame layout for the network backend.
 --
 --  Design rule 6: the header is a record with a representation clause.
---  No shifts, no masks. The header is placed over the first
---  Header_Length bytes of a frame by an overlay, and network byte order
---  is obtained with Scalar_Storage_Order, not by hand.
+--  The code uses no shifts and no masks. An overlay puts the header on
+--  the first Header_Length bytes of a frame. Scalar_Storage_Order gives
+--  network byte order (big-endian). No code swaps bytes by hand.
 --
---  Frame (DRAFT, signed off at Week 13 review):
+--  Frame layout. Status: draft. The Week 13 review must sign it off.
+--  The checksum scheme (CRC-32) is already decided.
 --
 --     byte  size  field
 --     0     2     Magic          16#BEAC#
---     2     2     Topic          Topic_Id_Type, assigned statically per Bridge
---     4     4     Sequence       per-topic, wraps
---     8     2     Length         payload bytes that follow the header
---     10    4     Checksum       over header (with Checksum = 0) + payload
---     14    L     Payload        L = Length, serialized Message_Type
+--     2     2     Topic          Topic_Id_Type, set statically for each Bridge
+--     4     4     Sequence       counts frames for each topic, wraps
+--     8     2     Length         number of payload bytes after the header
+--     10    4     Checksum       CRC-32 of header (with Checksum = 0) + payload
+--     14    L     Payload        L = Length, a serialized Message_Type
 --
---  Bytes exist here and in Beacon.Bridge only. They never reach
---  Beacon.Topic's API (design rule 1).
+--  Only this package and Beacon.Bridge use bytes. Bytes never reach the
+--  API of Beacon.Topic (design rule 1).
 
 with Interfaces;
 with System;
@@ -60,11 +61,11 @@ package Beacon.Wire is
      (Ok,
       Too_Short,        --  fewer than Header_Length bytes
       Bad_Magic,
-      Bad_Length,       --  Length field disagrees with bytes available
+      Bad_Length,       --  Length does not agree with the bytes in Frame
       Bad_Checksum);
 
-   --  CRC-32 (IEEE 802.3, the zlib one). Fixed; not a Week 13 decision
-   --  any more. Test vector: "123456789" -> 16#CBF43926#.
+   --  CRC-32 (IEEE 802.3, the same as zlib). This scheme is decided.
+   --  Test vector: "123456789" gives 16#CBF43926#.
    function Checksum (Data : Byte_Array) return Checksum_Type;
 
    procedure Encode
@@ -77,9 +78,9 @@ package Beacon.Wire is
                   and then Frame'Length >= Max_Frame,
           Post => Last = Frame'First + Header_Length + Payload'Length - 1;
 
-   --  Payload_Last is the last valid index of Payload on Ok. Frame must
-   --  be exactly one frame (Header_Length + Length bytes); a datagram
-   --  with trailing bytes is Bad_Length.
+   --  Frame must be exactly one frame: Header_Length + Length bytes. If a
+   --  datagram has more bytes, Status is Bad_Length. If Status is Ok,
+   --  Payload_Last is the last valid index of Payload.
    procedure Decode
      (Frame        : Byte_Array;
       Topic        : out Topic_Id_Type;

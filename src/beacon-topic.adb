@@ -60,7 +60,8 @@ package body Beacon.Topic is
    -- Registry --
    --------------
 
-   --  Static table, filled at startup. Not protected on purpose: see spec.
+   --  Fixed table. Create_Subscriber fills it at startup. The table is not
+   --  protected on purpose. See the package spec.
    type Subscriber_Access is access all Subscriber;
    type Registry_Array is array (1 .. Max_Subscribers) of Subscriber_Access;
 
@@ -82,7 +83,7 @@ package body Beacon.Topic is
    end Create_Publisher;
 
    procedure Publish (P : Publisher; Msg : Message_Type) is
-      pragma Unreferenced (P);  --  the precondition is the whole use
+      pragma Unreferenced (P);  --  P is used only by the precondition
    begin
       for I in 1 .. Registered loop
          Registry (I).Queue.Push (Msg);

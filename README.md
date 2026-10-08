@@ -1,34 +1,41 @@
 # beacon
 
-Typed publish-subscribe messaging in Ada. Topics are generic
-instantiations, so a subscriber to a `Telemetry_Topic` receives
-`Telemetry.Reading` values, never bytes. Bounded protected queues,
-two explicit delivery modes, and a UDP multicast bridge for
-cross-process use on the desktop.
+Typed publish-subscribe messaging in Ada.
 
-GNAT Academic Program capstone project. Proposal title: *Beacon: Typed
-Publish-Subscribe Messaging*.
+- Each topic is a generic instantiation. A subscriber to a
+  `Telemetry_Topic` receives `Telemetry.Reading` values, not bytes.
+- Each subscriber has a bounded protected queue.
+- Each subscriber has one of two delivery modes: Reliable or Best_Effort.
+- A UDP multicast bridge connects processes on a desktop.
+
+GNAT Academic Program capstone project. Proposal title: _Beacon: Typed
+Publish-Subscribe Messaging_.
 
 ## What it is
 
-The pattern under ROS2 and DDS, scoped to what can be built and proved
-in a year. A publisher writes typed values to a topic; any number of
-subscribers read them through their own bounded queue. What makes it
-worth doing in Ada:
+Beacon uses the same pattern as ROS2 and DDS. The scope is what a team
+can build and prove in one year. A publisher writes typed values to a
+topic. Each subscriber reads them through its own bounded queue. Ada
+gives these advantages:
 
-- **The type is the topic.** `package T is new Beacon.Topic (Reading, 32)`
-  and every `Publish`/`Receive` on `T` is checked by the compiler. No
-  `void*`, no cast, no header field to trust.
-- **Delivery mode is a discriminant, not a flag.** `Subscriber (Reliable)`
-  never drops and blocks the publisher when full. `Subscriber
-  (Best_Effort)` drops its oldest and counts it. `Dropped` is always 0 on
-  a Reliable subscriber; that is the checkable form of the promise.
-- **Bounded everywhere.** Queue depth and subscriber count are generic
-  parameters. No heap in `src/`. `Beacon.Queue` is SPARK.
+- **The type is the topic.** You write
+  `package T is new Beacon.Topic (Reading, 32)`. The compiler then checks
+  each `Publish` and `Receive` on `T`. The API has no `void*`, no cast,
+  and no header field that the receiver must trust.
+- **The delivery mode is a discriminant, not a flag.**
+  - `Subscriber (Reliable)` never drops a message. When its queue is
+    full, it blocks the publisher.
+  - `Subscriber (Best_Effort)` drops its oldest message when its queue is
+    full, and counts the drop.
+  - `Dropped` is always 0 on a Reliable subscriber. A test can check this
+    value.
+- **All sizes are bounded.** Queue depth and subscriber count are
+  generic parameters. Code in `src/` does not use the heap.
+  `Beacon.Queue` is SPARK.
 
 ## What is in the seed
 
-Everything runs. This is a working v0, not a skeleton:
+All code runs. This is a working v0, not a skeleton.
 
 ```
 src/beacon.ads               Delivery_Mode                                       SPARK
@@ -41,52 +48,62 @@ src/net/beacon-bridge.ads    generic: Egress task (local sub -> wire), Ingress t
 demo/telemetry.ads           message types + topic instantiations = the static registry
 demo/telemetry-codecs        Serialize/Deserialize by overlay of a rep-claused record
 demo/inproc_demo             1 kHz sensor + 10 Hz controller, checks both modes, exits non-zero on failure
-demo/net_publisher           200 readings over UDP ...
-demo/net_subscriber          ... received, CRC-checked, sequence gaps counted
+demo/net_publisher           sends 200 readings over UDP ...
+demo/net_subscriber          ... receives them, checks CRC, counts sequence gaps
 tests/                       queue (wrap, drop-oldest), topic (fan-out, overflow), wire (CRC vector, rejects)
 ```
 
-`BEACON_NETWORK=no` drops `src/net/` for targets without sockets.
+Set `BEACON_NETWORK=no` to build without `src/net/`. Use this for
+targets that have no sockets.
 
-Read `ARCHITECTURE.md` before touching anything.
+Read `ARCHITECTURE.md` before you change the code.
 
 ## Milestones
 
-1. **Prove `Beacon.Queue`.** `gnatprove --mode=all` clean: the ring
-   index arithmetic never leaves the array, `Fill` stays in range,
-   drop-oldest keeps head and tail consistent. Small package, first
-   real proof. Expect to add `Relaxed_Initialization` on `Buffer`.
-2. **Blocking semantics under load.** A test where a Reliable subscriber
-   is full, the publisher blocks in `Publish`, and unblocks when the
-   subscriber drains. Then a sustained load test: N tasks, minutes,
-   `Dropped (Reliable) = 0` at the end. Always.
-3. **Decide the open questions** (below), then change the code to match.
-4. **Make the bridge honest.** Measure loss on a real LAN, not loopback.
-   Report sequence gaps. Write the page that says what Reliable means
-   when the transport underneath is UDP, and compare to DDS RELIABLE
-   (retransmit) and BEST_EFFORT.
-5. **A second transport.** Serial (UART) is the natural one: it is what
-   a board-to-board link looks like, and it forces a framing decision
-   (length prefix vs delimiter) that UDP datagrams hid.
+1. **Prove `Beacon.Queue`.** `gnatprove --mode=all` must report no
+   errors. The proof must show these properties:
+   - The ring index arithmetic never goes outside the array.
+   - `Fill` stays in range.
+   - Drop-oldest keeps `Head` and `Tail` consistent.
+
+   This is a small package and the first real proof. You will probably
+   need `Relaxed_Initialization` on `Buffer`.
+2. **Blocking behavior under load.**
+   - Write a test where a Reliable subscriber is full. The publisher must
+     block in `Publish`, and must continue when the subscriber reads.
+   - Write a load test: N tasks for some minutes. At the end,
+     `Dropped (Reliable)` must be 0. This must be true in each run.
+3. **Decide the open decisions** (below). Then change the code to agree
+   with each decision.
+4. **Make the bridge honest.**
+   - Measure loss on a real LAN, not on loopback. Report sequence gaps.
+   - Write a page that states what Reliable means when the transport is
+     UDP. Compare it to DDS RELIABLE (with retransmission) and DDS
+     BEST_EFFORT.
+5. **A second transport.** Serial (UART) is the best candidate. A
+   board-to-board link uses serial. Serial also forces a framing decision
+   (length prefix or delimiter). UDP datagrams do not need this decision.
 
 ## Open decisions (Week 4)
 
-1. `Try_Publish` on a full Reliable subscriber: partial delivery
-   (current: the others get it, `Delivered = False`) or all-or-nothing.
-2. Registration is not task-safe and must precede any `Publish`. Keep
-   as a documented rule (current), or make the registry a protected
-   object. The in-process demo shows what happens when you get this
-   wrong: it waits on a `Go` entry before publishing.
-3. `Receive` blocks with no timeout. Keep, or add `Receive (S, Msg,
-   Timeout, Success)`.
-4. Registry holds `Subscriber'Unchecked_Access`: a subscriber declared
-   in a scope that exits leaves a dangling entry. Acceptable with the
-   "declare at library level" rule, or redesign.
+1. `Try_Publish` when a Reliable subscriber is full. Option A (current):
+   partial delivery. The other subscribers get the message, and
+   `Delivered` is False. Option B: all-or-nothing.
+2. Registration is not task-safe. All registration must occur before the
+   first `Publish`. Option A (current): keep this as a documented rule.
+   Option B: make the registry a protected object. The in-process demo
+   shows the failure: its tasks wait on a `Go` entry before they publish.
+3. `Receive` blocks and has no timeout. Option A (current): keep this.
+   Option B: add `Receive (S, Msg, Timeout, Success)`.
+4. The registry holds `Subscriber'Unchecked_Access`. If a subscriber is
+   declared in a scope that ends, the registry holds a dangling access.
+   Option A (current): accept this, with the rule "declare subscribers at
+   library level". Option B: change the design.
 
 ## Build
 
-Three [Alire](https://alire.ada.dev) crates; demo and tests pin the
-library by path.
+The project has three [Alire](https://alire.ada.dev) crates. The demo
+and test crates pin the library by path.
 
 ```
 alr build                           # library, with src/net
@@ -99,8 +116,8 @@ cd demo  && alr build && ./bin/inproc_demo
 alr with gnatprove && alr exec -- gnatprove -P beacon.gpr --mode=flow
 ```
 
-Contracts are checked at runtime in every build (`-gnata`). Warnings
-are errors.
+Each build checks contracts at runtime (`-gnata`). Each build treats
+warnings as errors.
 
 ## Design rules
 
@@ -126,8 +143,8 @@ See `CONTRIBUTING.md` for the fork workflow.
 
 ## Contact
 
-Olivier Henley, GAP Coordinator, AdaCore. Weekly meeting, plus the
-project Discord.
+Olivier Henley, GAP Coordinator, AdaCore. Weekly meeting and the project
+Discord.
 
 ## License
 

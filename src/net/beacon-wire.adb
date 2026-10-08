@@ -2,13 +2,13 @@ package body Beacon.Wire is
 
    use type Interfaces.Unsigned_16;
 
-   --  Header has Scalar_Storage_Order High_Order_First and is overlaid
-   --  on a Byte_Array (which has none); that is the intent, the warning
-   --  is about exactly the conversion we want.
+   --  Header has Scalar_Storage_Order High_Order_First. Byte_Array has no
+   --  storage order. The overlay of a Header on a Byte_Array is the byte
+   --  order conversion that we want, so this warning is not useful here.
    pragma Warnings (Off, "overlay changes scalar storage order");
 
-   --  CRC-32 (IEEE 802.3, reflected), table-free. The Week 13 decision
-   --  is made: this is the scheme. Same polynomial as zlib and PNG.
+   --  CRC-32 (IEEE 802.3, reflected), without a lookup table. This is the
+   --  same polynomial as zlib and PNG. The checksum scheme is decided.
    function Checksum (Data : Byte_Array) return Checksum_Type is
       Poly : constant Checksum_Type := 16#EDB88320#;
       C    : Checksum_Type := 16#FFFFFFFF#;
@@ -38,7 +38,7 @@ package body Beacon.Wire is
       Last     : out Natural)
    is
       First : constant Positive := Frame'First;
-      --  The overlay is THE way to write the header. Do not byte-pack.
+      --  Write the header through this overlay only. Do not pack bytes by hand.
       H : Header with Import, Address => Frame (First)'Address;
    begin
       Frame := [others => 0];
@@ -90,8 +90,8 @@ package body Beacon.Wire is
             return;
          end if;
 
-         --  Recompute with the checksum field zeroed, on a copy: Frame
-         --  is an in parameter and must not be modified.
+         --  Calculate the checksum again with the Checksum field set to 0.
+         --  Use a copy, because Frame is an in parameter.
          declare
             Copy : Byte_Array (1 .. Frame'Length) := Frame;
             HC   : Header with Import, Address => Copy (1)'Address;

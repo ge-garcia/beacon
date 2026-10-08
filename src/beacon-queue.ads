@@ -1,16 +1,17 @@
 --  Beacon.Queue: bounded FIFO ring buffer. SPARK proof target (Silver).
 --
---  This is a plain data structure: no tasking, no protection, no I/O.
---  Beacon.Topic wraps one of these in a protected type. Keeping the
---  ring arithmetic here, outside the protected type, is what makes the
---  proof small and independent of the tasking runtime.
+--  This package is plain data. It has no tasking, no protection, and no
+--  I/O. Beacon.Topic puts one queue in each protected object. The ring
+--  arithmetic is here, outside the protected type, so that the proof is
+--  small and does not depend on the tasking runtime.
 --
---  Design rule 3: Depth is fixed at instantiation. No growth, no heap.
+--  Design rule 3: Depth is fixed at instantiation. The queue does not
+--  grow and does not use the heap.
 --
---  Note on the proposal's sketch: `type Ring_Index is mod Queue_Depth`
---  is illegal because a modulus must be static and a generic formal
---  object is not. Indices are a Natural subtype with an explicit
---  `mod Depth` on advance instead.
+--  The proposal used `type Ring_Index is mod Queue_Depth`. That is not
+--  legal Ada: a modulus must be static, and a generic formal object is
+--  not static. Ring_Index is a Natural subtype instead, and Next uses an
+--  explicit `mod Depth`.
 
 generic
    type Element_Type is private;
@@ -22,9 +23,9 @@ is
    type Queue_Type is private;
 
    Empty_Queue : constant Queue_Type;
-   --  The only way to get a well-formed queue. Element slots are left
-   --  uninitialized on purpose (Element_Type may have no default); only
-   --  slots between Head and Tail are ever read.
+   --  The only correct initial value. The element slots are not
+   --  initialized, because Element_Type may have no default value. The
+   --  queue reads only the slots that hold elements.
 
    function Count (Q : Queue_Type) return Natural
      with Post => Count'Result <= Depth;
@@ -32,13 +33,15 @@ is
    function Is_Empty (Q : Queue_Type) return Boolean is (Count (Q) = 0);
    function Is_Full  (Q : Queue_Type) return Boolean is (Count (Q) = Depth);
 
-   --  Reliable path. Caller guarantees room.
+   --  Used for Reliable delivery. The caller must make sure that Q is not
+   --  full.
    procedure Push (Q : in out Queue_Type; Item : Element_Type)
      with Pre  => not Is_Full (Q),
           Post => Count (Q) = Count (Q'Old) + 1;
 
-   --  Best-effort path. If full, the oldest element is overwritten and
-   --  Dropped is True. Never fails, never blocks.
+   --  Used for Best_Effort delivery. If Q is full, the oldest element is
+   --  removed first and Dropped is True. This procedure never fails and
+   --  never blocks.
    procedure Push_Dropping_Oldest
      (Q       : in out Queue_Type;
       Item    : Element_Type;
@@ -62,17 +65,17 @@ private
       Tail   : Ring_Index := 0;   --  next slot to Push
       Fill   : Natural range 0 .. Depth := 0;
    end record;
-   --  Invariant to carry through proof:
+   --  Invariant for the proof:
    --    Tail = (Head + Fill) mod Depth
-   --  Buffer is deliberately not initialized (Element_Type may have no
-   --  default). Only slots Head .. Head + Fill - 1 (mod Depth) are ever
-   --  read. Expect to need Relaxed_Initialization to convince flow analysis.
+   --  Buffer is not initialized (see Empty_Queue). The queue reads only
+   --  the slots Head .. Head + Fill - 1 (mod Depth). The proof will
+   --  probably need Relaxed_Initialization on Buffer to state this.
 
    function Count (Q : Queue_Type) return Natural is (Q.Fill);
 
    pragma Warnings (Off, "component ""Buffer"" of type ""Element_Array"" is uninitialized");
    Empty_Queue : constant Queue_Type := (Buffer => <>, Head => 0, Tail => 0, Fill => 0);
    pragma Warnings (On, "component ""Buffer"" of type ""Element_Array"" is uninitialized");
-   --  Buffer is deliberately uninitialized: see the comment above.
+   --  Buffer is not initialized on purpose. See the comment on Empty_Queue.
 
 end Beacon.Queue;
