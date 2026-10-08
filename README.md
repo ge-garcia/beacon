@@ -50,6 +50,8 @@ tests/                       queue (wrap, drop-oldest), topic (fan-out, overflow
 
 Read `ARCHITECTURE.md` before touching anything.
 
+`tests/COVERAGE.md` lists which behaviors the tests check.
+
 ## Milestones
 
 1. **Prove `Beacon.Queue`.** `gnatprove --mode=all` clean: the ring

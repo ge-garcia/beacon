@@ -25,6 +25,9 @@ Do not weaken a contract or an invariant to make something pass. If a
 contract is wrong, fix the contract on its own, with the reasoning in
 the commit message, and bring it to the meeting.
 
+When a commit adds or changes a test, update `tests/COVERAGE.md` in the
+same commit.
+
 ## Reviews
 
 Reviews happen on your fork, at the weekly meeting, on the branch you
