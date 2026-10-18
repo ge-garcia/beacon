@@ -14,6 +14,8 @@
 --                          |
 --                      Beacon.Transport.UDP     GNAT.Sockets multicast
 --
+--  The design rules are listed in README.md. Comments refer to them by number.
+--
 --  Design rule 1: a message type never crosses the public API as bytes.
 --  Bytes exist only inside Beacon.Wire and Beacon.Bridge, and only on
 --  their way to or from a socket.

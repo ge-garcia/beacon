@@ -102,17 +102,25 @@ alr with gnatprove && alr exec -- gnatprove -P beacon.gpr --mode=flow
 Contracts are checked at runtime in every build (`-gnata`). Warnings
 are errors.
 
-## Rules of the road
+## Design rules
 
-- Topics are generic instantiations. A byte-buffer payload in the
-  public API is a rejected design, whatever the reason.
-- Queues are bounded at instantiation. No growth.
-- `src/` has no network dependency; `src/net/` has no tasking runtime
-  requirement beyond what `src/` needs.
-- Wire framing is a record with a representation clause, not shifts
-  and masks. Same for message codecs.
-- The publisher never touches a subscriber's queue except through the
-  protected type.
+The code refers to these rules by number.
+
+1. **No bytes in the public API.** Each topic is a generic instantiation
+   for one message type. A byte-buffer payload in the public API is a
+   rejected design, for any reason.
+2. **The delivery mode is part of the subscriber type.** Reliable never
+   drops. Best_Effort drops the oldest message and counts the drop.
+3. **Queues are bounded at instantiation.** A queue does not grow.
+4. **The model is static.** Topics and participants are configured at
+   compile time or at startup. Nothing is discovered at runtime.
+   Subscribers register before the first `Publish`.
+5. **`src/` has no network dependency.** `src/net/` needs no tasking
+   runtime features beyond the features that `src/` needs.
+6. **Wire frames and message codecs use records with representation
+   clauses.** Do not use shifts and masks.
+7. **The publisher writes to a subscriber's queue only through the
+   protected type.**
 
 See `CONTRIBUTING.md` for the fork workflow.
 
