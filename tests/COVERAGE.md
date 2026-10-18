@@ -56,10 +56,10 @@ you must add functional contracts to `Beacon.Queue`.
 | `Try_Publish` on a full Reliable subscriber does not block and sets `Delivered` to False.    | Tested        | The test also checks that the queue does not change and `Dropped = 0`.    |
 | `Try_Publish` on a full Best_Effort subscriber drops the oldest message and counts the drop. | Tested        | ------------------------------------------------------------------------- |
 | `Try_Publish` gives the message to all subscribers that are not full.                        | Partly tested | The test does not check that the Best_Effort queue holds the new message. |
-| `Try_Publish` sets `Delivered` to True when all subscribers are Best_Effort.                 | Not tested    | ------------------------------------------------------------------------- |
-| `Publish` on a full Best_Effort subscriber drops the oldest message and does not block.      | Demo only     | This uses the `Push` entry. `Try_Publish` uses a different path.          |
-| `Dropped` counts more than one drop.                                                         | Demo only     | ------------------------------------------------------------------------- |
-| `Try_Receive` returns a message and `Pending` decreases by 1.                                | Not tested    | The test checks only the empty case.                                      |
+| `Try_Publish` sets `Delivered` to True when all subscribers are Best_Effort.                 | Tested        | ------------------------------------------------------------------------- |
+| `Publish` on a full Best_Effort subscriber drops the oldest message and does not block.      | Tested        | This uses the `Push` entry. `Try_Publish` uses a different path.          |
+| `Dropped` counts more than one drop.                                                         | Tested        | ------------------------------------------------------------------------- |
+| `Try_Receive` returns a message and `Pending` decreases by 1.                                | Tested        | ------------------------------------------------------------------------- |
 | `Publish` with zero subscribers does nothing.                                                | Not tested    | ------------------------------------------------------------------------- |
 | A second `Create_Publisher` raises `Assertion_Error`.                                        | Not tested    | Precondition. Single writer rule.                                         |
 | `Create_Subscriber` past `Max_Subscribers` raises `Assertion_Error`.                         | Not tested    | Precondition.                                                             |

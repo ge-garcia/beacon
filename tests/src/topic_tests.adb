@@ -31,12 +31,20 @@ procedure Topic_Tests is
    package T is new Beacon.Topic
      (Message_Type => Reading, Queue_Depth => Depth, Max_Subscribers => 2);
 
+   --  A second topic with only a Best_Effort subscriber, so that Publish
+   --  can fill the queue without blocking.
+   package BE_Topic is new Beacon.Topic
+     (Message_Type => Reading, Queue_Depth => Depth, Max_Subscribers => 1);
+
    Pub       : T.Publisher;
    Rel       : aliased T.Subscriber (Reliable);
    Best      : aliased T.Subscriber (Best_Effort);
+   BE_Pub    : BE_Topic.Publisher;
+   BE_Sub    : aliased BE_Topic.Subscriber (Best_Effort);
    Msg       : Reading;
    Got       : Boolean;
    Delivered : Boolean;
+   In_Order  : Boolean;
 
 begin
    Put_Line ("Beacon.Topic tests");
@@ -80,6 +88,30 @@ begin
    end loop;
    T.Try_Receive (Rel, Msg, Got);
    Check (not Got, "reliable drained, Try_Receive says empty");
+
+   --  Publish on a full Best_Effort queue. Publish uses the Push entry,
+   --  not the Try_Push procedure that Try_Publish uses. If Publish
+   --  blocks, this test does not end.
+   BE_Topic.Create_Publisher (BE_Pub);
+   BE_Topic.Create_Subscriber (BE_Sub);
+   for I in 1 .. Depth + 2 loop
+      BE_Topic.Publish (BE_Pub, (Id => I, Value => 0.0));
+   end loop;
+   Check (BE_Topic.Pending (BE_Sub) = Depth and then BE_Topic.Dropped (BE_Sub) = 2,
+          "best-effort full: Publish does not block and counts each drop");
+   BE_Topic.Try_Publish (BE_Pub, (Id => Depth + 3, Value => 0.0), Delivered);
+   Check (Delivered and then BE_Topic.Dropped (BE_Sub) = 3,
+          "all subscribers best-effort: Try_Publish reports delivered");
+
+   --  Try_Receive on a queue that holds messages. The queue holds the
+   --  newest Depth messages.
+   In_Order := True;
+   for Expected in Depth + 1 .. Depth + 3 loop
+      BE_Topic.Try_Receive (BE_Sub, Msg, Got);
+      In_Order := In_Order and then Got and then Msg.Id = Expected
+                  and then BE_Topic.Pending (BE_Sub) = Depth + 3 - Expected;
+   end loop;
+   Check (In_Order, "Try_Receive returns the oldest, Pending decreases by 1");
 
    --  TODO (weeks 5-8): blocking Publish on a full Reliable queue, from a
    --  separate task, verified to unblock when the subscriber drains.
