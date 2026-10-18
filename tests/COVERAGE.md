@@ -83,11 +83,11 @@ queue never becomes full.
 | `Topic`, `Sequence`, `Length`, and `Checksum` are big-endian at their offsets.         | Not tested | Only `Magic` is checked.                 |
 | A frame shorter than the header gives `Too_Short`.                                     | Tested     | ---------------------------------------- |
 | A frame shorter than header + `Length` gives `Bad_Length`.                             | Tested     | ---------------------------------------- |
-| A frame longer than header + `Length` gives `Bad_Length`.                              | Not tested | The spec states this rule.               |
-| A `Length` field above `Max_Payload` gives `Bad_Length`.                               | Not tested | `'Valid` check on the field.             |
-| A wrong magic value gives `Bad_Magic`.                                                 | Not tested | ---------------------------------------- |
+| A frame longer than header + `Length` gives `Bad_Length`.                              | Tested     | The spec states this rule.               |
+| A `Length` field above `Max_Payload` gives `Bad_Length`.                               | Tested     | `'Valid` check on the field.             |
+| A wrong magic value gives `Bad_Magic`.                                                 | Tested     | ---------------------------------------- |
 | A changed payload byte gives `Bad_Checksum`.                                           | Tested     | ---------------------------------------- |
-| A changed header byte gives `Bad_Checksum`.                                            | Not tested | ---------------------------------------- |
+| A changed header byte gives `Bad_Checksum`.                                            | Tested     | ---------------------------------------- |
 | On each error status, `Decode` sets its outputs to zero.                               | Not tested | ---------------------------------------- |
 | `Encode` and `Decode` work with an empty payload.                                      | Not tested | ---------------------------------------- |
 | `Encode` and `Decode` work with a payload of `Max_Payload` bytes.                      | Not tested | ---------------------------------------- |

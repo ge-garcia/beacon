@@ -62,6 +62,29 @@ begin
    Decode (Frame (1 .. Last), Topic, Seq, Payload, PL, Status);
    Check (Status = Bad_Checksum, "flipped payload byte rejected");
 
+   --  Decode reads frames from the network, so test each way that it
+   --  rejects a frame. Each case starts from a new good frame.
+   --  Frame (I) holds wire byte I - 1.
+
+   Encode (Topic => 7, Sequence => 42, Payload => Sample, Frame => Frame, Last => Last);
+   Frame (1) := 16#00#;
+   Decode (Frame (1 .. Last), Topic, Seq, Payload, PL, Status);
+   Check (Status = Bad_Magic, "wrong magic rejected");
+
+   Encode (Topic => 7, Sequence => 42, Payload => Sample, Frame => Frame, Last => Last);
+   Decode (Frame (1 .. Last + 1), Topic, Seq, Payload, PL, Status);
+   Check (Status = Bad_Length, "trailing byte after the frame rejected");
+
+   Encode (Topic => 7, Sequence => 42, Payload => Sample, Frame => Frame, Last => Last);
+   Frame (9 .. 10) := [16#04#, 16#01#];  --  Length = Max_Payload + 1
+   Decode (Frame (1 .. Last), Topic, Seq, Payload, PL, Status);
+   Check (Status = Bad_Length, "Length field above Max_Payload rejected");
+
+   Encode (Topic => 7, Sequence => 42, Payload => Sample, Frame => Frame, Last => Last);
+   Frame (5) := Frame (5) xor 16#FF#;  --  first byte of Sequence
+   Decode (Frame (1 .. Last), Topic, Seq, Payload, PL, Status);
+   Check (Status = Bad_Checksum, "flipped header byte rejected");
+
    New_Line;
    if Failures = 0 then
       Put_Line ("all passed");
