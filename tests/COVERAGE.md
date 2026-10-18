@@ -4,7 +4,8 @@ This file compares the specs with the tests. The specs are the package
 specs in `src/**/*.ads` and the text in `ARCHITECTURE.md`. Each row is
 one behavior that a spec states.
 
-Status as of 2026-10-08, seed commit `c7e44fd`.
+First written on 2026-10-08, for seed commit `c7e44fd`. Each commit
+that adds or changes a test updates its rows here.
 
 ## Terms
 
@@ -25,10 +26,10 @@ Status as of 2026-10-08, seed commit `c7e44fd`.
 | --------------------------------------------------------------------------- | ------------- | ------------------------------------- |
 | A new queue is empty. `Push` fills it to `Depth`. `Pop` returns FIFO order. | Tested        | ------------------------------------- |
 | `Push` and `Pop` wrap around the end of the ring.                           | Tested        | ------------------------------------- |
-| `Push_Dropping_Oldest` drops the oldest element when the queue is full.     | Partly tested | The test makes only one drop.         |
-| `Push_Dropping_Oldest` keeps the order after many drops in sequence.        | Not tested    | `Head` must wrap more than one time.  |
-| `Push_Dropping_Oldest` works when `Head` is not at index 0.                 | Not tested    | Make a partial `Pop` before the drop. |
-| The queue works with `Depth = 1`.                                           | Not tested    | `Next` uses `mod 1` in this case.     |
+| `Push_Dropping_Oldest` drops the oldest element when the queue is full.     | Tested        | ------------------------------------- |
+| `Push_Dropping_Oldest` keeps the order after many drops in sequence.        | Tested        | `Head` wraps two times.               |
+| `Push_Dropping_Oldest` works when `Head` is not at index 0.                 | Tested        | A `Pop` before the drop moves `Head`. |
+| The queue works with `Depth = 1`.                                           | Tested        | `Next` uses `mod 1` in this case.     |
 | `Pop` on an empty queue raises `Assertion_Error`.                           | Not tested    | Precondition.                         |
 | `Push` on a full queue raises `Assertion_Error`.                            | Not tested    | Precondition.                         |
 
