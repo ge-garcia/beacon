@@ -11,7 +11,7 @@
 --     byte  size  field
 --     0     2     Magic          16#BEAC#
 --     2     2     Topic          Topic_Id_Type, set statically for each Bridge
---     4     4     Sequence       counts frames for each topic, wraps
+--     4     4     Sequence       counts frames for each topic, wraps at 2**32
 --     8     2     Length         number of payload bytes after the header
 --     10    4     Checksum       CRC-32 of header (with Checksum = 0) + payload
 --     14    L     Payload        L = Length, a serialized Message_Type
@@ -60,14 +60,18 @@ package Beacon.Wire is
    type Decode_Status is
      (Ok,
       Too_Short,        --  fewer than Header_Length bytes
-      Bad_Magic,
-      Bad_Length,       --  Length does not agree with the bytes in Frame
-      Bad_Checksum);
+      Bad_Magic,        --  Magic is not Magic_Value
+      Bad_Length,       --  Length is above Max_Payload, or Frame is not
+                        --  exactly Header_Length + Length bytes
+      Bad_Checksum);    --  the checksum of header + payload does not agree
 
    --  CRC-32 (IEEE 802.3, the same as zlib). This scheme is decided.
    --  Test vector: "123456789" gives 16#CBF43926#.
    function Checksum (Data : Byte_Array) return Checksum_Type;
 
+   --  Writes one frame (header + Payload) at the start of Frame. Last is
+   --  the index of the last byte of the frame. Encode sets all other bytes
+   --  of Frame to 0.
    procedure Encode
      (Topic    : Topic_Id_Type;
       Sequence : Sequence_Type;
@@ -78,9 +82,14 @@ package Beacon.Wire is
                   and then Frame'Length >= Max_Frame,
           Post => Last = Frame'First + Header_Length + Payload'Length - 1;
 
-   --  Frame must be exactly one frame: Header_Length + Length bytes. If a
-   --  datagram has more bytes, Status is Bad_Length. If Status is Ok,
-   --  Payload_Last is the last valid index of Payload.
+   --  Reads one frame. Frame must be exactly one frame: Header_Length +
+   --  Length bytes. If a datagram has more bytes, Status is Bad_Length.
+   --  Decode never raises an exception for bad input. It always sets
+   --  Status.
+   --  Status = Ok: Topic and Sequence come from the header. The payload
+   --  is in Payload (Payload'First .. Payload_Last).
+   --  Other Status: Topic and Sequence are 0, Payload is all 0, and
+   --  Payload_Last is Payload'First - 1.
    procedure Decode
      (Frame        : Byte_Array;
       Topic        : out Topic_Id_Type;

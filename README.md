@@ -48,7 +48,7 @@ src/net/beacon-bridge.ads    generic: Egress task (local sub -> wire), Ingress t
 demo/telemetry.ads           message types + topic instantiations = the static registry
 demo/telemetry-codecs        Serialize/Deserialize by overlay of a rep-claused record
 demo/inproc_demo             1 kHz sensor + 10 Hz controller, checks both modes, exits non-zero on failure
-demo/net_publisher           sends 200 readings over UDP ...
+demo/net_publisher           sends readings over UDP ...
 demo/net_subscriber          ... receives them, checks CRC, counts sequence gaps
 tests/                       queue (wrap, drop-oldest), topic (fan-out, overflow), wire (CRC vector, rejects)
 ```

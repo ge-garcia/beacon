@@ -10,7 +10,7 @@
 --  Max_Subscribers entries. Rules for the user:
 --    * Register each subscriber at startup, before the first Publish.
 --    * Register from one task only. Registration is not task-safe.
---  Publishing is task-safe.
+--  After registration, Publish, Receive and the queries are task-safe.
 --
 --  Single writer: each instantiation has one Publisher. Create_Publisher
 --  refuses a second one.
@@ -34,18 +34,24 @@ package Beacon.Topic is
    -- Publisher --
    ---------------
 
+   --  True after Create_Publisher has run for this instantiation.
    function Has_Publisher return Boolean;
+
+   --  True after Create_Publisher has run on P.
    function Is_Created (P : Publisher) return Boolean;
 
+   --  Makes P the one publisher of this instantiation.
    procedure Create_Publisher (P : in out Publisher)
      with Pre  => not Has_Publisher and then not Is_Created (P),
           Post => Has_Publisher and then Is_Created (P);
 
    --  Sends Msg to each registered subscriber, in registration order.
    --  Reliable subscriber with a full queue: Publish blocks until the
-   --  queue has room.
+   --  queue has room. While Publish blocks, the subscribers registered
+   --  after this one do not get Msg.
    --  Best_Effort subscriber with a full queue: the oldest message is
-   --  dropped and counted.
+   --  dropped and counted. Publish does not block.
+   --  With zero registered subscribers, Publish does nothing.
    procedure Publish (P : Publisher; Msg : Message_Type)
      with Pre => Is_Created (P);
 
@@ -66,24 +72,31 @@ package Beacon.Topic is
    -- Subscriber --
    ----------------
 
+   --  Number of registered subscribers.
    function Subscriber_Count return Natural
      with Post => Subscriber_Count'Result <= Max_Subscribers;
 
+   --  True after Create_Subscriber has run on S.
    function Is_Registered (S : Subscriber) return Boolean;
 
-   --  S must exist until the last Publish. Declare S at library level, or
-   --  in the scope that contains the full run. The registry uses no heap,
-   --  so it does not copy S.
+   --  Adds S to the registry. The registry keeps an access to S and does
+   --  not copy S. Thus S must exist until the last Publish. Declare S at
+   --  library level, or in the scope that contains the full run. If S
+   --  goes out of scope first, the registry holds a dangling access.
    procedure Create_Subscriber (S : aliased in out Subscriber)
      with Pre  => Subscriber_Count < Max_Subscribers
                   and then not Is_Registered (S),
           Post => Subscriber_Count = Subscriber_Count'Old + 1
                   and then Is_Registered (S);
 
-   --  If S is empty, Receive blocks until a message arrives.
+   --  Removes the oldest message from S and returns it in Msg. If S is
+   --  empty, Receive blocks until a message arrives. Receive has no
+   --  timeout.
    procedure Receive (S : in out Subscriber; Msg : out Message_Type)
      with Pre => Is_Registered (S);
 
+   --  Same as Receive, but does not block. If S is empty, Success is
+   --  False and Msg is not set.
    procedure Try_Receive
      (S       : in out Subscriber;
       Msg     : out Message_Type;

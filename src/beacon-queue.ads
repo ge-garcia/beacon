@@ -12,6 +12,9 @@
 --  legal Ada: a modulus must be static, and a generic formal object is
 --  not static. Ring_Index is a Natural subtype instead, and Next uses an
 --  explicit `mod Depth`.
+--
+--  The postconditions state only the value of Count. They do not state
+--  which elements are in the queue. FIFO order is checked by tests only.
 
 generic
    type Element_Type is private;
@@ -23,25 +26,27 @@ is
    type Queue_Type is private;
 
    Empty_Queue : constant Queue_Type;
-   --  The only correct initial value. The element slots are not
-   --  initialized, because Element_Type may have no default value. The
-   --  queue reads only the slots that hold elements.
+   --  The only correct initial value. Each object of Queue_Type must start
+   --  as Empty_Queue. The element slots are not initialized, because
+   --  Element_Type may have no default value. The queue reads only the
+   --  slots that hold elements.
 
+   --  Number of elements in Q.
    function Count (Q : Queue_Type) return Natural
      with Post => Count'Result <= Depth;
 
    function Is_Empty (Q : Queue_Type) return Boolean is (Count (Q) = 0);
    function Is_Full  (Q : Queue_Type) return Boolean is (Count (Q) = Depth);
 
-   --  Used for Reliable delivery. The caller must make sure that Q is not
-   --  full.
+   --  Adds Item at the tail. Used for Reliable delivery. The caller must
+   --  make sure that Q is not full.
    procedure Push (Q : in out Queue_Type; Item : Element_Type)
      with Pre  => not Is_Full (Q),
           Post => Count (Q) = Count (Q'Old) + 1;
 
-   --  Used for Best_Effort delivery. If Q is full, the oldest element is
-   --  removed first and Dropped is True. This procedure never fails and
-   --  never blocks.
+   --  Adds Item at the tail. Used for Best_Effort delivery. If Q is full,
+   --  the oldest element is removed first and Dropped is True. This
+   --  procedure always adds Item.
    procedure Push_Dropping_Oldest
      (Q       : in out Queue_Type;
       Item    : Element_Type;
@@ -49,6 +54,8 @@ is
      with Post => Dropped = Is_Full (Q'Old)
                   and then Count (Q) = Natural'Min (Count (Q'Old) + 1, Depth);
 
+   --  Removes the oldest element and returns it in Item. The caller must
+   --  make sure that Q is not empty.
    procedure Pop (Q : in out Queue_Type; Item : out Element_Type)
      with Pre  => not Is_Empty (Q),
           Post => Count (Q) = Count (Q'Old) - 1;

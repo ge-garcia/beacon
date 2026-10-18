@@ -41,6 +41,10 @@ initialized on purpose, because `Element_Type` may have no default
 value. The queue reads only the slots between `Head` and `Tail`. The
 proof will need `Relaxed_Initialization` on `Buffer` to state this.
 
+The postconditions of `Beacon.Queue` state only `Count`. A Silver proof
+(no runtime errors) does not show FIFO order. To prove FIFO order, add
+functional contracts.
+
 ## Delivery modes
 
 `Subscriber (Mode : Delivery_Mode)`. The mode is also a discriminant of

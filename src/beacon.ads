@@ -5,8 +5,10 @@
 --     Beacon.Topic  (generic)      typed Publisher and Subscriber, protected queue, registry
 --          |
 --     Beacon.Queue  (generic)      bounded ring buffer, no tasking     [SPARK proof target]
+--          |
+--     Beacon                       Delivery_Mode
 --
---     -- src/net/: desktop only. The two packages above never refer to these. --
+--     -- src/net/: desktop only. The packages above never refer to these. --
 --
 --     Beacon.Bridge (generic)      connects one Topic instance to a Transport
 --          |              |
@@ -26,8 +28,8 @@ is
 
    --  Design rule 2: the delivery mode is part of the subscriber type.
    --    Reliable     When the queue is full, Publish blocks and
-   --                 Try_Publish reports the refusal. No message is ever
-   --                 dropped.
+   --                 Try_Publish reports the refusal. Beacon.Topic never
+   --                 drops a message for a Reliable subscriber.
    --    Best_Effort  When the queue is full, the OLDEST message is dropped
    --                 to make room. Dropped counts each drop.
    type Delivery_Mode is (Reliable, Best_Effort);
