@@ -41,7 +41,7 @@ begin
         (Pub, (Sensor => 7, Sequence => Seq, Temperature => Float (Seq) / 10.0));
       delay 0.001;
    end loop;
-   delay 0.2;  --  let the egress task flush
+   delay 0.2;  --  give the egress task time to send the queued readings
    Temperature_Bridge.Stop;
    Beacon.Transport.UDP.Close (Net);
    Put_Line ("net_publisher: done");

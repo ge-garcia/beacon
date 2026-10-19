@@ -1,7 +1,8 @@
 package body Telemetry.Codecs is
 
-   --  Reading has Scalar_Storage_Order High_Order_First; the byte array
-   --  has none. The overlay is the conversion, and this warning says so.
+   --  Reading has Scalar_Storage_Order High_Order_First. The byte array has
+   --  no storage order. The overlay is the byte order conversion that we
+   --  want, so this warning is not useful here.
    pragma Warnings (Off, "overlay changes scalar storage order");
 
    procedure Serialize_Reading

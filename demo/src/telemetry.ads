@@ -1,6 +1,6 @@
---  Telemetry: the message types and topic instantiations shared by every
---  demo program. This file IS the static topic registry (design rule 4):
---  a process that withs it knows every topic and every type at compile time.
+--  Telemetry: the message types and topic instantiations for all demo
+--  programs. This file is the static topic registry (design rule 4). A
+--  program that withs it knows each topic and each type at compile time.
 
 with Beacon.Topic;
 with System;
@@ -9,8 +9,8 @@ package Telemetry is
 
    type Sensor_Id is range 0 .. 255 with Size => 8;
 
-   --  Wire-ready record: representation clause here means Serialize in
-   --  the bridge is an overlay, not a hand-packed buffer.
+   --  This record has a representation clause. Thus the codec can use an
+   --  overlay and does not pack bytes by hand.
    type Reading is record
       Sensor      : Sensor_Id;
       Sequence    : Natural;
@@ -19,7 +19,7 @@ package Telemetry is
      with Size                 => 72,
           Bit_Order            => System.High_Order_First,
           Scalar_Storage_Order => System.High_Order_First;
-   --  Network byte order by declaration, so the codec is an overlay.
+   --  Scalar_Storage_Order gives network byte order.
    for Reading use record
       Sensor      at 0 range 0 .. 7;
       Sequence    at 1 range 0 .. 31;
@@ -32,15 +32,16 @@ package Telemetry is
       Target : Sensor_Id;
    end record;
 
-   --  High rate, latest value matters: subscribers use Best_Effort.
+   --  High rate. Only the newest value is important. Subscribers use
+   --  Best_Effort.
    package Temperature_Topic is new Beacon.Topic
      (Message_Type => Reading, Queue_Depth => 32);
 
-   --  Low rate, every message matters: subscribers use Reliable.
+   --  Low rate. Each message is important. Subscribers use Reliable.
    package Command_Topic is new Beacon.Topic
      (Message_Type => Command, Queue_Depth => 8);
 
-   --  Wire topic ids for the network demo. One per instantiation.
+   --  Wire topic ids for the network demo. Each instantiation has its own id.
    Temperature_Topic_Id : constant := 1;
    Command_Topic_Id     : constant := 2;
 
