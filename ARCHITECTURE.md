@@ -67,6 +67,25 @@ Thus a blocked Reliable subscriber stops publication to the subscribers
 after it. If this is important, register Reliable subscribers first, or
 use `Try_Publish`.
 
+Beacon’s delivery modes control local queue overflow, not delivery
+across the network. DDS reliability QoS addresses a different question:
+whether communication between a writer and a reader includes recovery
+of lost messages.
+
+DDS BEST_EFFORT does not track receipt or resend lost messages.
+DDS RELIABLE uses acknowledgements and retransmission to recover
+losses. It does not automatically guarantee delivery of every message:
+history settings determine which messages are retained for recovery,
+and resource limits bound how much can be buffered. With KEEP_LAST,
+newer messages can replace older, unacknowledged ones.
+See the [RTI Connext documentation](https://community.rti.com/static/documentation/connext-dds/current/doc/manuals/connext_dds_professional/users_manual/users_manual/RELIABILITY_QosPolicy.htm).
+
+Neither Beacon mode adds acknowledgements or retransmission to the UDP
+bridge. On ingress, the bridge uses Try_Publish, so a full Reliable
+subscriber can miss a message without increasing its Dropped count.
+Dropped = 0 therefore means no queued messages were overwritten,
+not that every published message arrived.
+
 ## The registry
 
 The registry is a fixed array of `Max_Subscribers` access values.
