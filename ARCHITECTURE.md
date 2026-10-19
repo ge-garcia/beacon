@@ -96,10 +96,18 @@ writing that down properly.
 ## Transport
 
 `Transport` is a limited interface with `Send` and `Receive (Timeout)`.
-UDP is the one implementation. Conversion between `Wire.Byte_Array`
+UDP is the network implementation. Conversion between `Wire.Byte_Array`
 and `Stream_Element_Array` is an `Unchecked_Conversion` on same-sized
-arrays, in one place. A loopback in-memory transport for tests is a
-good first addition; a serial one is milestone 5.
+arrays, in one place. `Beacon.Transport.Loopback` connects bridge instances
+without sockets: sends copy datagrams into a protected, 16-slot FIFO and
+receives remove them with a timeout. A full FIFO raises `Queue_Full` rather
+than blocking or silently dropping data. Empty or oversized sends raise
+`Constraint_Error`; an undersized receive buffer discards the datagram and
+raises `Constraint_Error`. `Queue_Full` aliases the transport-level
+`Would_Block` exception: egress retries the same frame at 1 ms intervals,
+checking `Stop` between attempts. Saturation therefore applies backpressure
+without terminating egress or preventing shutdown. A serial transport is
+milestone 5.
 
 ## Codecs
 
