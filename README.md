@@ -58,6 +58,8 @@ targets that have no sockets.
 
 Read `ARCHITECTURE.md` before you change the code.
 
+`tests/COVERAGE.md` lists which behaviors the tests check.
+
 ## Milestones
 
 1. **Prove `Beacon.Queue`.** `gnatprove --mode=all` must report no
