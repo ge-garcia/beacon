@@ -30,14 +30,22 @@ package body Beacon.Bridge is
    begin
       accept Start (T : Transport_Ref) do
          Net := T;
+         Local.Create_Subscriber (Sub);
       end Start;
-      Local.Create_Subscriber (Sub);
       while not Stopping loop
          Local.Try_Receive (Sub, Msg, Got);
          if Got then
             Serialize (Msg, Payload, PL);
             Wire.Encode (Topic_Id, Sequence, Payload (1 .. PL), Frame, FL);
-            Net.Send (Frame (1 .. FL));
+            loop
+               exit when Stopping;
+               begin
+                  Net.Send (Frame (1 .. FL));
+                  exit;
+               exception
+                  when Transport.Would_Block => delay 0.001;
+               end;
+            end loop;
             Sequence := Sequence + 1;
          else
             delay 0.001;
@@ -74,8 +82,8 @@ package body Beacon.Bridge is
    begin
       accept Start (T : Transport_Ref) do
          Net := T;
+         Local.Create_Publisher (Pub);
       end Start;
-      Local.Create_Publisher (Pub);
       while not Stopping loop
          Net.Receive (Frame, Count, Poll_Timeout);
          if Count > 0 then
