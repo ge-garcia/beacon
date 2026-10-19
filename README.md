@@ -79,9 +79,8 @@ Read `ARCHITECTURE.md` before you change the code.
    with each decision.
 4. **Make the bridge honest.**
    - Measure loss on a real LAN, not on loopback. Report sequence gaps.
-   - Write a page that states what Reliable means when the transport is
-     UDP. Compare it to DDS RELIABLE (with retransmission) and DDS
-     BEST_EFFORT.
+   - Decide what our [delivery modes](/ARCHITECTURE.md#delivery-modes)
+     mean for Beacon's reliability.
 5. **A second transport.** Serial (UART) is the best candidate. A
    board-to-board link uses serial. Serial also forces a framing decision
    (length prefix or delimiter). UDP datagrams do not need this decision.
