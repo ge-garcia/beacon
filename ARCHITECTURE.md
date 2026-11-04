@@ -149,14 +149,18 @@ Results:
 ## Transport
 
 `Transport` is a limited interface with `Send` and `Receive (Timeout)`.
-UDP is the only implementation. One `Unchecked_Conversion` converts
-between `Wire.Byte_Array` and `Stream_Element_Array`. The two array
-types have the same size, and the conversion occurs in one place only.
-
-Recommended next steps:
-
-- An in-memory loopback transport for tests. Write this first.
-- A serial transport. This is Milestone 5.
+UDP is the network implementation. Conversion between `Wire.Byte_Array`
+and `Stream_Element_Array` is an `Unchecked_Conversion` on same-sized
+arrays, in one place. `Beacon.Transport.Loopback` connects bridge instances
+without sockets: sends copy datagrams into a protected, 16-slot FIFO and
+receives remove them with a timeout. A full FIFO raises `Queue_Full` rather
+than blocking or silently dropping data. Empty or oversized sends raise
+`Constraint_Error`; an undersized receive buffer discards the datagram and
+raises `Constraint_Error`. `Queue_Full` aliases the transport-level
+`Would_Block` exception: egress retries the same frame at 1 ms intervals,
+checking `Stop` between attempts. Saturation therefore applies backpressure
+without terminating egress or preventing shutdown. A serial transport is
+milestone 5.
 
 ## Codecs
 
