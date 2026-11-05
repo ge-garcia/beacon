@@ -22,7 +22,8 @@ jobs:
           cd tests
           alr -n build
           ./bin/queue_tests
-          ./bin/topic_tests
+          timeout 10s ./bin/topic_tests
+          timeout 15s ./bin/topic_load_tests 2
           ./bin/wire_tests
           timeout 10s ./bin/transport_tests
           timeout 10s ./bin/bridge_tests
