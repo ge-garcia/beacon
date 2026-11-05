@@ -38,8 +38,9 @@ difficulty.
 
 `Empty_Queue` is the only correct initial value. `Buffer` is not
 initialized on purpose, because `Element_Type` may have no default
-value. The queue reads only the slots between `Head` and `Tail`. The
-proof will need `Relaxed_Initialization` on `Buffer` to state this.
+value. The queue reads only the slots between `Head` and `Tail`.
+`Element_Array` has `Relaxed_Initialization`, and the type invariant of
+`Queue_Type` states that these slots are initialized.
 
 The postconditions of `Beacon.Queue` state only `Count`. A Silver proof
 (no runtime errors) does not show FIFO order. To prove FIFO order, add

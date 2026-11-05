@@ -68,8 +68,8 @@ Read `ARCHITECTURE.md` before you change the code.
    - `Fill` stays in range.
    - Drop-oldest keeps `Head` and `Tail` consistent.
 
-   This is a small package and the first real proof. You will probably
-   need `Relaxed_Initialization` on `Buffer`.
+   This is a small package and the first real proof. It uses
+   `Relaxed_Initialization` on `Buffer` and a type invariant.
 2. **Blocking behavior under load.**
    - Write a test where a Reliable subscriber is full. The publisher must
      block in `Publish`, and must continue when the subscriber reads.
