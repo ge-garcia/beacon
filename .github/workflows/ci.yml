@@ -15,8 +15,12 @@ jobs:
           toolchain: gnat_native=16.1.0 gprbuild=26.0.1
       - name: Build library (with network)
         run: alr -n build
-      - name: Build library (BEACON_NETWORK=no, the embedded profile)
+      - name: Build library (BEACON_NETWORK=no, without src/net)
         run: BEACON_NETWORK=no alr -n build
+      - name: Check src/ under the Jorvik profile
+        run: |
+          printf 'pragma Profile (Jorvik);\n' > "$RUNNER_TEMP/jorvik.adc"
+          alr -n exec -- gcc -c -gnat2022 -gnatc -gnatec="$RUNNER_TEMP/jorvik.adc" -Isrc src/*.ads src/*.adb
       - name: Tests
         run: |
           cd tests
