@@ -3,6 +3,9 @@ package body Beacon.Bridge is
    type Transport_Ref is access all Transport.Transport'Class;
 
    Rejected : Natural := 0 with Atomic;
+   Undelivered : Natural := 0 with Atomic;
+
+   type Subscriber_Ref is access Local.Subscriber;
    Gaps     : Natural := 0 with Atomic;
    Stopping : Boolean := False with Atomic;
 
@@ -17,7 +20,7 @@ package body Beacon.Bridge is
    end Egress_Task;
 
    task body Egress_Task is
-      Sub      : aliased Local.Subscriber (Mode);
+      Sub      : constant Subscriber_Ref := new Local.Subscriber (Mode);
       Net      : Transport_Ref;
       Msg      : Local.Message_Type;
       Payload  : Wire.Byte_Array (1 .. Wire.Max_Payload);
@@ -30,10 +33,10 @@ package body Beacon.Bridge is
    begin
       accept Start (T : Transport_Ref) do
          Net := T;
+         Local.Create_Subscriber (Sub.all);
       end Start;
-      Local.Create_Subscriber (Sub);
       while not Stopping loop
-         Local.Try_Receive (Sub, Msg, Got);
+         Local.Try_Receive (Sub.all, Msg, Got);
          if Got then
             Serialize (Msg, Payload, PL);
             Wire.Encode (Topic_Id, Sequence, Payload (1 .. PL), Frame, FL);
@@ -74,8 +77,8 @@ package body Beacon.Bridge is
    begin
       accept Start (T : Transport_Ref) do
          Net := T;
+         Local.Create_Publisher (Pub);
       end Start;
-      Local.Create_Publisher (Pub);
       while not Stopping loop
          Net.Receive (Frame, Count, Poll_Timeout);
          if Count > 0 then
@@ -89,9 +92,12 @@ package body Beacon.Bridge is
                Deserialize (Payload (1 .. PL), Msg, Valid);
                if Valid then
                   --  Try, not block: a stuck local subscriber must not
-                  --  stall the network reader. Reliable subscribers see
-                  --  this as Delivered = False on their side of the log.
+                  --  stall the network reader. Count incomplete fan-out
+                  --  once per message, not once per refusing subscriber.
                   Local.Try_Publish (Pub, Msg, Accepted);
+                  if not Accepted then
+                     Undelivered := Undelivered + 1;
+                  end if;
                else
                   Rejected := Rejected + 1;
                end if;
@@ -116,7 +122,9 @@ package body Beacon.Bridge is
      (T    : not null access Transport.Transport'Class;
       Mode : Delivery_Mode) is
    begin
-      Stopping := False;
+      if Stopping or else Egress /= null then
+         raise Program_Error with "egress may only start once before Stop";
+      end if;
       Egress := new Egress_Task (Mode);
       Egress.Start (Transport_Ref (T));
    end Start_Egress;
@@ -124,7 +132,9 @@ package body Beacon.Bridge is
    procedure Start_Ingress
      (T : not null access Transport.Transport'Class) is
    begin
-      Stopping := False;
+      if Stopping or else Ingress /= null then
+         raise Program_Error with "ingress may only start once before Stop";
+      end if;
       Ingress := new Ingress_Task;
       Ingress.Start (Transport_Ref (T));
    end Start_Ingress;
@@ -132,7 +142,16 @@ package body Beacon.Bridge is
    procedure Stop is
    begin
       Stopping := True;
+      --  Terminated also covers a task that exited through an exception.
+      --  Keep T alive until both workers have stopped using it.
+      while (Egress /= null and then not Egress.all'Terminated)
+        or else (Ingress /= null and then not Ingress.all'Terminated)
+      loop
+         delay 0.001;
+      end loop;
    end Stop;
+
+   function Local_Delivery_Failures return Natural is (Undelivered);
 
    function Rejected_Frames return Natural is (Rejected);
    function Sequence_Gaps   return Natural is (Gaps);

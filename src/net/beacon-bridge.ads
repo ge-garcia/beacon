@@ -21,10 +21,11 @@
 --  They are supplied per instantiation, expected to be an overlay of a
 --  record with a representation clause (design rule 6), not hand-packing.
 --
---  One egress and one ingress per instantiation, each a task started
---  on demand. Stop asks both to finish; they exit after their current
---  Receive returns (Ingress polls with a 100 ms timeout, Egress after
---  the next local message, so publish one or accept the delay).
+--  At most one egress and one ingress per instantiation. Call lifecycle
+--  operations from one controlling task, never from a codec or transport.
+--  Start is one-shot: no restart after Stop. Keep the transport alive until
+--  Stop returns. Egress registration remains allocated for the topic lifetime;
+--  stop application publishers before Stop (the egress queue is not drained).
 
 with Beacon.Topic;
 with Beacon.Wire;
@@ -44,19 +45,30 @@ generic
 package Beacon.Bridge is
 
    --  Forward local publications to T. Registers a local Subscriber in
-   --  Mode; counts toward Max_Subscribers.
+   --  Mode; counts toward Max_Subscribers. Registration is complete
+   --  when this procedure returns. A repeated start or start after Stop
+   --  raises Program_Error when the precondition is satisfied.
    procedure Start_Egress
      (T    : not null access Transport.Transport'Class;
       Mode : Delivery_Mode)
      with Pre => Local.Subscriber_Count < Local.Max_Subscribers;
 
    --  Publish frames arriving on T (with matching Topic_Id) locally.
-   --  Takes the local Publisher slot.
+   --  Takes the local Publisher slot before returning. Start is one-shot.
    procedure Start_Ingress
      (T : not null access Transport.Transport'Class)
      with Pre => not Local.Has_Publisher;
 
+   --  Request shutdown and wait for both workers to terminate. Idempotent,
+   --  including before startup. Pending egress messages are not drained.
+   --  An in-flight operation may finish; transport/codec calls must return
+   --  for this wait to finish. Close the transport only after this returns.
    procedure Stop;
+
+   --  Incoming messages refused by at least one full Reliable subscriber.
+   --  Counts incomplete publications, not individual subscriber refusals.
+   --  Other subscribers may have received the message. Lifetime cumulative.
+   function Local_Delivery_Failures return Natural;
 
    --  Frames received with a bad status or a foreign Topic_Id.
    function Rejected_Frames return Natural;

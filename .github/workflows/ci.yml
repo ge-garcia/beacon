@@ -15,12 +15,17 @@ jobs:
       - name: Build library (BEACON_NETWORK=no, the embedded profile)
         run: BEACON_NETWORK=no alr -n build
       - name: Tests
+        timeout-minutes: 5
         run: |
           cd tests
           alr -n build
           ./bin/queue_tests
           ./bin/topic_tests
           ./bin/wire_tests
+          ./bin/bridge_startup_tests
+          ./bin/bridge_ingress_tests
+          ./bin/bridge_shutdown_tests
+          ./bin/bridge_receive_shutdown_tests
       - name: In-process demo (reliable never drops, best-effort keeps newest)
         run: |
           cd demo
