@@ -181,6 +181,8 @@ begin
    Check (Ingress.Rejected_Frames = 0 and then Ingress.Sequence_Gaps = 0,
           "round trip has no rejections or gaps");
 
+   --  Inject a missing sequence, then distinguish rejected wire frames
+   --  from a valid wire frame whose payload fails deserialization.
    Encode (7, 0, [10], Frame, Last);
    Input.Send (Frame (1 .. Last));
    Expect_Injected (10);
@@ -210,6 +212,9 @@ begin
    Check (Validation.Sequence_Gaps = 1, "invalid-codec payload advances wire sequence");
    Check (Injected.Pending (Checked) = 0, "rejected frames never published");
 
+   --  Fill every slot in the transport's queue before publishing. The new
+   --  frame cannot be sent until the test drains the queue; retries must
+   --  preserve the frame and its sequence.
    for I in 1 .. Beacon.Transport.Loopback.Capacity loop
       Full.FIFO.Send ([0]);
    end loop;
@@ -229,6 +234,7 @@ begin
    Saturated.Publish (Full_Pub, 51);
    Expect_Frame (51, 1);
 
+   --  Stop with another frame still waiting on a full transport.
    for I in 1 .. Beacon.Transport.Loopback.Capacity loop
       Full.FIFO.Send ([0]);
    end loop;

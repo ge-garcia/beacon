@@ -46,6 +46,9 @@ package body Beacon.Transport.Loopback is
          delay Duration'Max (0.0, Timeout);
          return;
       end select;
+      --  Mailbox.Get removes a datagram from the queue before Receive checks
+      --  the caller's buffer size. If the buffer is too short, Receive raises
+      --  Constraint_Error, and that datagram is already gone.
       if Frame'Length < Item.Length then
          raise Constraint_Error;
       end if;

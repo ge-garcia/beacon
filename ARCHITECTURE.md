@@ -148,19 +148,24 @@ Results:
 
 ## Transport
 
-`Transport` is a limited interface with `Send` and `Receive (Timeout)`.
-UDP is the network implementation. Conversion between `Wire.Byte_Array`
-and `Stream_Element_Array` is an `Unchecked_Conversion` on same-sized
-arrays, in one place. `Beacon.Transport.Loopback` connects bridge instances
-without sockets: sends copy datagrams into a protected, 16-slot FIFO and
-receives remove them with a timeout. A full FIFO raises `Queue_Full` rather
-than blocking or silently dropping data. Empty or oversized sends raise
-`Constraint_Error`; an undersized receive buffer discards the datagram and
-raises `Constraint_Error`. `Queue_Full` aliases the transport-level
-`Would_Block` exception: egress retries the same frame at 1 ms intervals,
-checking `Stop` between attempts. Saturation therefore applies backpressure
-without terminating egress or preventing shutdown. A serial transport is
-milestone 5.
+`Beacon.Transport` is a limited interface with `Send` and `Receive (Timeout)`.
+If `Send` raises `Would_Block`, it has not sent the frame.
+Egress retries that frame every 1 ms until `Send` succeeds or `Stop` is
+requested.
+
+`Beacon.Transport.UDP` uses multicast datagrams. It converts between
+`Wire.Byte_Array` and `Stream_Element_Array` with an
+`Unchecked_Conversion` on equal-sized arrays in one place.
+
+`Beacon.Transport.Loopback` connects bridge instances without sockets.
+Each instance has a protected, 16-slot FIFO. `Send` copies a datagram
+into the FIFO; `Receive` removes one or times out. When the FIFO is full,
+`Send` raises `Queue_Full`, an alias of `Would_Block`, without changing
+the queue. Empty or oversized sends raise `Constraint_Error`. A receive
+buffer that is too small discards its datagram and raises
+`Constraint_Error`.
+
+A serial transport is planned for milestone 5.
 
 ## Codecs
 
