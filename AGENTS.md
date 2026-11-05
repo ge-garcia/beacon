@@ -58,9 +58,6 @@ repository root. Each step must pass before you report that a change is done.
    alr -n exec -- gnatprove -P beacon_prove.gpr --mode=all --checks-as-errors=on
    ```
 
-   Flow analysis must pass. Until Milestone 1 is done, the proof can
-   report unproved checks.
-
 ## Rules
 
 - The compiler treats warnings as errors (`-gnatwe`). Fix the cause of a

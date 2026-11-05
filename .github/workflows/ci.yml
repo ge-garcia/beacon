@@ -43,8 +43,6 @@ jobs:
         run: alr -n exec -- gnatprove -P ../beacon.gpr --mode=flow --checks-as-errors=on
       - name: SPARK proof of Beacon.Queue
         working-directory: prove
-        # Remove when Milestone 1 is done.
-        continue-on-error: true
         run: alr -n exec -- gnatprove -P beacon_prove.gpr --mode=all --checks-as-errors=on
       - name: Keep the proof output
         if: always()
