@@ -64,19 +64,38 @@ private
 
    subtype Ring_Index is Natural range 0 .. Depth - 1;
 
-   type Element_Array is array (Ring_Index) of Element_Type;
+   type Element_Array is array (Ring_Index) of Element_Type
+     with Relaxed_Initialization;
 
    type Queue_Type is record
       Buffer : Element_Array;
       Head   : Ring_Index := 0;   --  next slot to Pop
       Tail   : Ring_Index := 0;   --  next slot to Push
       Fill   : Natural range 0 .. Depth := 0;
-   end record;
-   --  Invariant for the proof:
+   end record
+     with Type_Invariant => Is_Valid (Queue_Type);
+   --  Invariant for the proof (Is_Valid):
    --    Tail = (Head + Fill) mod Depth
+   --    The slots Head .. Head + Fill - 1 (mod Depth) are initialized.
    --  Buffer is not initialized (see Empty_Queue). The queue reads only
-   --  the slots Head .. Head + Fill - 1 (mod Depth). The proof will
-   --  probably need Relaxed_Initialization on Buffer to state this.
+   --  these slots.
+
+   --  Number of steps from slot From forward to slot To, with wraparound.
+   --  It has no mod and cannot overflow.
+   function Distance (From, To : Ring_Index) return Natural is
+     (if From <= To then To - From else To + (Depth - From))
+     with Ghost;
+
+   --  True if slot I holds an element of Q.
+   function Is_Occupied (Q : Queue_Type; I : Ring_Index) return Boolean is
+     (Distance (Q.Head, I) < Q.Fill)
+     with Ghost;
+
+   function Is_Valid (Q : Queue_Type) return Boolean is
+     (Distance (Q.Head, Q.Tail) = (if Q.Fill = Depth then 0 else Q.Fill)
+      and then (for all I in Ring_Index =>
+                  (if Is_Occupied (Q, I) then Q.Buffer (I)'Initialized)))
+     with Ghost;
 
    function Count (Q : Queue_Type) return Natural is (Q.Fill);
 
