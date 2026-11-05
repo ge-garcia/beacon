@@ -8,7 +8,7 @@ is
    procedure Push (Q : in out Queue_Type; Item : Element_Type) is
    begin
       Q.Buffer (Q.Tail) := Item;
-      Q.Tail := Next (Q.Tail);
+      Q.Tail := (Q.Head + Q.Fill + 1) mod Depth;
       Q.Fill := Q.Fill + 1;
    end Push;
 
