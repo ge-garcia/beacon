@@ -52,7 +52,7 @@ is
       Item    : Element_Type;
       Dropped : out Boolean)
      with Post => Dropped = Is_Full (Q'Old)
-                  and then Count (Q) = Natural'Min (Count (Q'Old) + 1, Depth);
+                  and then Count (Q) = (if Dropped then Count (Q'Old) else Count (Q'Old) + 1);
 
    --  Removes the oldest element and returns it in Item. The caller must
    --  make sure that Q is not empty.
