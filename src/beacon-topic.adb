@@ -6,8 +6,14 @@ package body Beacon.Topic is
 
    protected body Bounded_Queue is
 
+      procedure Update_Barriers is
+      begin
+         Full  := Ring.Is_Full (Q);
+         Empty := Ring.Is_Empty (Q);
+      end Update_Barriers;
+
       entry Push (Msg : Message_Type)
-        when Mode = Best_Effort or else not Ring.Is_Full (Q)
+        when Mode = Best_Effort or else not Full
       is
          Dropped : Boolean;
       begin
@@ -19,6 +25,7 @@ package body Beacon.Topic is
          else
             Ring.Push (Q, Msg);
          end if;
+         Update_Barriers;
       end Push;
 
       procedure Try_Push (Msg : Message_Type; Accepted : out Boolean) is
@@ -36,11 +43,13 @@ package body Beacon.Topic is
             Ring.Push (Q, Msg);
             Accepted := True;
          end if;
+         Update_Barriers;
       end Try_Push;
 
-      entry Pop (Msg : out Message_Type) when not Ring.Is_Empty (Q) is
+      entry Pop (Msg : out Message_Type) when not Empty is
       begin
          Ring.Pop (Q, Msg);
+         Update_Barriers;
       end Pop;
 
       procedure Try_Pop (Msg : out Message_Type; Success : out Boolean) is
@@ -49,6 +58,7 @@ package body Beacon.Topic is
          if Success then
             Ring.Pop (Q, Msg);
          end if;
+         Update_Barriers;
       end Try_Pop;
 
       function Count return Natural is (Ring.Count (Q));

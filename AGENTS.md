@@ -26,13 +26,20 @@ repository root. Each step must pass before you report that a change is done.
    alr -n build
    ```
 
-2. Build the embedded profile, without `src/net/`:
+2. Build the library without `src/net/`:
 
    ```sh
    BEACON_NETWORK=no alr -n build
    ```
 
-3. Build and run the tests:
+3. Check `src/` under the Jorvik profile:
+
+   ```sh
+   printf 'pragma Profile (Jorvik);\n' > /tmp/jorvik.adc
+   alr -n exec -- gcc -c -gnat2022 -gnatc -gnatec=/tmp/jorvik.adc -Isrc src/*.ads src/*.adb
+   ```
+
+4. Build and run the tests:
 
    ```sh
    cd tests
@@ -42,7 +49,7 @@ repository root. Each step must pass before you report that a change is done.
    ./bin/wire_tests
    ```
 
-4. Build and run the in-process demo:
+5. Build and run the in-process demo:
 
    ```sh
    cd demo
@@ -50,7 +57,7 @@ repository root. Each step must pass before you report that a change is done.
    ./bin/inproc_demo
    ```
 
-5. Run SPARK flow analysis and the proof from the `prove/` crate:
+6. Run SPARK flow analysis and the proof from the `prove/` crate:
 
    ```sh
    cd prove
