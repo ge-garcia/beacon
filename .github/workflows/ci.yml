@@ -21,6 +21,8 @@ jobs:
           ./bin/queue_tests
           ./bin/topic_tests
           ./bin/wire_tests
+          timeout 10s ./bin/transport_tests
+          timeout 10s ./bin/bridge_tests
       - name: In-process demo (reliable never drops, best-effort keeps newest)
         run: |
           cd demo

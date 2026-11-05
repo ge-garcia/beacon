@@ -23,8 +23,8 @@
 --
 --  One egress and one ingress per instantiation, each a task started
 --  on demand. Stop asks both to finish; they exit after their current
---  Receive returns (Ingress polls with a 100 ms timeout, Egress after
---  the next local message, so publish one or accept the delay).
+--  operation (Ingress polls at 100 ms, idle Egress at 1 ms). Keep the
+--  transport alive until the tasks terminate; Stop does not join them.
 
 with Beacon.Topic;
 with Beacon.Wire;
@@ -44,14 +44,15 @@ generic
 package Beacon.Bridge is
 
    --  Forward local publications to T. Registers a local Subscriber in
-   --  Mode; counts toward Max_Subscribers.
+   --  Mode; counts toward Max_Subscribers. Registered before this returns.
+   --  Transient transport saturation retries the same frame until sent or Stop.
    procedure Start_Egress
      (T    : not null access Transport.Transport'Class;
       Mode : Delivery_Mode)
      with Pre => Local.Subscriber_Count < Local.Max_Subscribers;
 
    --  Publish frames arriving on T (with matching Topic_Id) locally.
-   --  Takes the local Publisher slot.
+   --  Takes the local Publisher slot before this returns.
    procedure Start_Ingress
      (T : not null access Transport.Transport'Class)
      with Pre => not Local.Has_Publisher;

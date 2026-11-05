@@ -30,14 +30,29 @@ package body Beacon.Bridge is
    begin
       accept Start (T : Transport_Ref) do
          Net := T;
+         --  Topic's registry is not task-safe. Register during the Start
+         --  rendezvous so the caller can publish after Start_Egress returns.
+         Local.Create_Subscriber (Sub);
       end Start;
-      Local.Create_Subscriber (Sub);
       while not Stopping loop
          Local.Try_Receive (Sub, Msg, Got);
+
          if Got then
             Serialize (Msg, Payload, PL);
             Wire.Encode (Topic_Id, Sequence, Payload (1 .. PL), Frame, FL);
-            Net.Send (Frame (1 .. FL));
+
+            --  Would_Block means no frame was sent, so retry the same frame
+            --  and sequence until Send succeeds or Stop abandons it.
+            loop
+               exit when Stopping;
+               begin
+                  Net.Send (Frame (1 .. FL));
+                  exit;
+               exception
+                  when Transport.Would_Block => delay 0.001;
+               end;
+            end loop;
+
             Sequence := Sequence + 1;
          else
             delay 0.001;
@@ -74,8 +89,9 @@ package body Beacon.Bridge is
    begin
       accept Start (T : Transport_Ref) do
          Net := T;
+         --  Claim Topic's single publisher slot before Start returns.
+         Local.Create_Publisher (Pub);
       end Start;
-      Local.Create_Publisher (Pub);
       while not Stopping loop
          Net.Receive (Frame, Count, Poll_Timeout);
          if Count > 0 then
