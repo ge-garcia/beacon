@@ -42,9 +42,11 @@ value. The queue reads only the slots between `Head` and `Tail`.
 `Element_Array` has `Relaxed_Initialization`, and the type invariant of
 `Queue_Type` states that these slots are initialized.
 
-The postconditions of `Beacon.Queue` state only `Count`. A Silver proof
-(no runtime errors) does not show FIFO order. To prove FIFO order, add
-functional contracts.
+A Silver proof (no runtime errors) does not show FIFO order. Thus the
+postconditions of `Beacon.Queue` also state the elements in the queue.
+The ghost function `Element_At (Q, K)` gives the K-th oldest element.
+The proof shows that `Pop` returns the oldest element. It also shows
+that `Push_Dropping_Oldest` can remove only the oldest element.
 
 ## Delivery modes
 
