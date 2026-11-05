@@ -195,14 +195,19 @@ begin
    Input.Send (Frame (1 .. Last));
    Encode (8, 3, [30], Frame, Last);
    Input.Send (Frame (1 .. Last));
-   Encode (7, 3, [30, 31], Frame, Last);
+   Encode (7, 3, [30], Frame, Last);
    Input.Send (Frame (1 .. Last));
-   Encode (7, 4, [40], Frame, Last);
+   Expect_Injected (30);
+   Check (Validation.Sequence_Gaps = 1, "rejected wire frames do not change sequence tracking");
+
+   Encode (7, 4, [30, 31], Frame, Last);
+   Input.Send (Frame (1 .. Last));
+   Encode (7, 5, [40], Frame, Last);
    Input.Send (Frame (1 .. Last));
    Expect_Injected (40);
    Check (Validation.Rejected_Frames = 4,
           "short, corrupt, foreign-topic and invalid-codec frames rejected");
-   Check (Validation.Sequence_Gaps = 1, "rejected wire frames do not change sequence tracking");
+   Check (Validation.Sequence_Gaps = 1, "invalid-codec payload advances wire sequence");
    Check (Injected.Pending (Checked) = 0, "rejected frames never published");
 
    for I in 1 .. Beacon.Transport.Loopback.Capacity loop
