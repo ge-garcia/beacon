@@ -128,6 +128,11 @@ has a test vector.
 
 `Start_Egress` and `Start_Ingress` each allocate one task. The tasks are
 never freed. The bridge is desktop only, so the heap is permitted there.
+The egress subscriber is also retained for the topic lifetime, because the
+static registry has no unregister operation. Both startup procedures finish
+local registration before returning. Each direction may start only once;
+no direction can start after Stop. Lifecycle calls belong to one controlling
+task and must not be made from inside a codec or transport callback.
 
 - **Egress** polls `Try_Receive` on its local subscriber every 1 ms. It
   sends one frame for each message. The sequence number increases by 1
@@ -135,8 +140,16 @@ never freed. The bridge is desktop only, so the heap is permitted there.
 - **Ingress** polls the transport with a 100 ms timeout. For each frame
   it decodes the frame, checks the topic id, counts sequence gaps,
   deserializes the message, and calls `Try_Publish` locally. A full local
-  subscriber thus cannot stop the network reader.
-- **Stop** sets a flag. Each task ends at its next poll.
+  subscriber thus cannot stop the network reader. `Local_Delivery_Failures`
+  counts incoming messages refused by at least one full Reliable subscriber,
+  once per incomplete publication. Other subscribers may still receive it.
+  This lifetime counter is separate from `Rejected_Frames`.
+- **Stop** sets a flag and waits until both workers have terminated, including
+  workers that exited through an exception. Only then may the caller close
+  the transport. Repeated Stop is safe. A current operation may complete;
+  Stop does not drain queued outgoing messages. Stop application publishers
+  first. Custom transport/codec calls must return for Stop to finish; there
+  is no unconditional shutdown deadline.
 
 Results:
 
