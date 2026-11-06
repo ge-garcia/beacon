@@ -24,6 +24,7 @@ Your fork has the same CI workflow. The workflow does these steps:
 2. Runs the tests.
 3. Runs the demos.
 4. Runs SPARK flow analysis.
+5. Runs the SPARK proof of Beacon.Queue.
 
 All steps must pass. When you add behavior, add a test or a proof for it
 in the same commit.

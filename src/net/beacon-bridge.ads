@@ -21,11 +21,13 @@
 --  They are supplied per instantiation, expected to be an overlay of a
 --  record with a representation clause (design rule 6), not hand-packing.
 --
---  At most one egress and one ingress per instantiation. Call lifecycle
---  operations from one controlling task, never from a codec or transport.
---  Start is one-shot: no restart after Stop. Keep the transport alive until
---  Stop returns. Egress registration remains allocated for the topic lifetime;
---  stop application publishers before Stop (the egress queue is not drained).
+
+--  One egress and one ingress per instantiation, each started
+--  on demand. Stop asks both to finish and waits for the tasks to
+--  terminate after their current operations complete (Ingress polls
+--  at 100 ms, idle Egress at 1 ms) Keeps transport alive until Stop
+--  is returned. Egress registration remains allocated for topic lifetime.
+--  Stop will not drain pending outgoing messages.
 
 with Beacon.Topic;
 with Beacon.Wire;
@@ -45,16 +47,19 @@ generic
 package Beacon.Bridge is
 
    --  Forward local publications to T. Registers a local Subscriber in
-   --  Mode; counts toward Max_Subscribers. Registration is complete
-   --  when this procedure returns. A repeated start or start after Stop
-   --  raises Program_Error when the precondition is satisfied.
+   --  Mode; counts toward Max_Subscribers. Registration is complete when
+   --  procedure returns. Transient transport saturation retires the same frame
+   --  until sent or Stop is requested. Recurrent startup or startup after Stop is
+   --  not supported.
+
    procedure Start_Egress
      (T    : not null access Transport.Transport'Class;
       Mode : Delivery_Mode)
      with Pre => Local.Subscriber_Count < Local.Max_Subscribers;
 
    --  Publish frames arriving on T (with matching Topic_Id) locally.
-   --  Takes the local Publisher slot before returning. Start is one-shot.
+   --  Takes local Publisher slot before returning, the start being one-shot
+
    procedure Start_Ingress
      (T : not null access Transport.Transport'Class)
      with Pre => not Local.Has_Publisher;

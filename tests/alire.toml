@@ -1,8 +1,7 @@
 name = "beacon_tests"
 description = "beacon unit tests"
-executables = ["queue_tests", "topic_tests", "wire_tests",
-               "bridge_startup_tests", "bridge_ingress_tests", "bridge_shutdown_tests",
-               "bridge_receive_shutdown_tests"]
+executables = ["queue_tests", "topic_tests", "wire_tests", "transport_tests", "bridge_tests", "bridge_startup_tests", "bridge_ingress_tests",
+               "bridge_shutdown_tests", "bridge_receive_shutdown_tests"]
 version = "0.1.0-dev"
 authors = ["Olivier Henley"]
 maintainers = ["Olivier Henley <henley@adacore.com>"]

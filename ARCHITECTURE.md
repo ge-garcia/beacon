@@ -38,8 +38,9 @@ difficulty.
 
 `Empty_Queue` is the only correct initial value. `Buffer` is not
 initialized on purpose, because `Element_Type` may have no default
-value. The queue reads only the slots between `Head` and `Tail`. The
-proof will need `Relaxed_Initialization` on `Buffer` to state this.
+value. The queue reads only the slots between `Head` and `Tail`.
+`Element_Array` has `Relaxed_Initialization`, and the type invariant of
+`Queue_Type` states that these slots are initialized.
 
 The postconditions of `Beacon.Queue` state only `Count`. A Silver proof
 (no runtime errors) does not show FIFO order. To prove FIFO order, add
@@ -161,15 +162,24 @@ Results:
 
 ## Transport
 
-`Transport` is a limited interface with `Send` and `Receive (Timeout)`.
-UDP is the only implementation. One `Unchecked_Conversion` converts
-between `Wire.Byte_Array` and `Stream_Element_Array`. The two array
-types have the same size, and the conversion occurs in one place only.
+`Beacon.Transport` is a limited interface with `Send` and `Receive (Timeout)`.
+If `Send` raises `Would_Block`, it has not sent the frame.
+Egress retries that frame every 1 ms until `Send` succeeds or `Stop` is
+requested.
 
-Recommended next steps:
+`Beacon.Transport.UDP` uses multicast datagrams. It converts between
+`Wire.Byte_Array` and `Stream_Element_Array` with an
+`Unchecked_Conversion` on equal-sized arrays in one place.
 
-- An in-memory loopback transport for tests. Write this first.
-- A serial transport. This is Milestone 5.
+`Beacon.Transport.Loopback` connects bridge instances without sockets.
+Each instance has a protected, 16-slot FIFO. `Send` copies a datagram
+into the FIFO; `Receive` removes one or times out. When the FIFO is full,
+`Send` raises `Queue_Full`, an alias of `Would_Block`, without changing
+the queue. Empty or oversized sends raise `Constraint_Error`. A receive
+buffer that is too small discards its datagram and raises
+`Constraint_Error`.
+
+A serial transport is planned for milestone 5.
 
 ## Codecs
 
