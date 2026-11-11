@@ -16,8 +16,10 @@
 --  refuses a second one.
 --
 --  Runtime: this package needs protected types with entries. Use a
---  light-tasking (Ravenscar or Jorvik) or full runtime. A ZFP runtime
---  cannot host this package; use Beacon.Queue directly on ZFP.
+--  Jorvik light-tasking runtime or a full runtime. Ravenscar cannot host
+--  this package: it allows one entry in each protected object, and
+--  Bounded_Queue has two. A ZFP runtime cannot host this package; use
+--  Beacon.Queue directly on ZFP.
 
 with Beacon.Queue;
 
@@ -127,6 +129,13 @@ private
    private
       Q     : Ring.Queue_Type := Ring.Empty_Queue;
       Drops : Natural := 0;
+      --  Ring.Is_Full (Q) and Ring.Is_Empty (Q), for the barriers. Jorvik
+      --  (Pure_Barriers) does not let a barrier call a function.
+      Full  : Boolean := False;
+      Empty : Boolean := True;
+      --  Sets Full and Empty from Q. Each operation that changes Q must
+      --  call it last.
+      procedure Update_Barriers;
    end Bounded_Queue;
 
    type Subscriber (Mode : Delivery_Mode) is limited record
