@@ -13,8 +13,9 @@
 --  not static. Ring_Index is a Natural subtype instead, and Next uses an
 --  explicit `mod Depth`.
 --
---  The postconditions state only the value of Count. They do not state
---  which elements are in the queue. FIFO order is checked by tests only.
+--  The postconditions state Count and the elements in the queue, through
+--  the ghost function Element_At. The proof shows FIFO order and
+--  drop-oldest.
 
 generic
    type Element_Type is private;
@@ -38,27 +39,47 @@ is
    function Is_Empty (Q : Queue_Type) return Boolean is (Count (Q) = 0);
    function Is_Full  (Q : Queue_Type) return Boolean is (Count (Q) = Depth);
 
+   --  The K-th oldest element of Q. Element_At (Q, 1) is the next element
+   --  that Pop returns. Element_At (Q, Count (Q)) is the newest element.
+   --  Only contracts and other ghost code can call it.
+   function Element_At (Q : Queue_Type; K : Positive) return Element_Type
+     with Ghost,
+          Pre => K <= Count (Q);
+
    --  Adds Item at the tail. Used for Reliable delivery. The caller must
-   --  make sure that Q is not full.
+   --  make sure that Q is not full. The elements already in Q do not
+   --  change.
    procedure Push (Q : in out Queue_Type; Item : Element_Type)
      with Pre  => not Is_Full (Q),
-          Post => Count (Q) = Count (Q'Old) + 1;
+          Post => Count (Q) = Count (Q'Old) + 1
+                  and then Element_At (Q, Count (Q)) = Item
+                  and then (for all K in 1 .. Count (Q'Old) =>
+                              Element_At (Q, K) = Element_At (Q'Old, K));
 
    --  Adds Item at the tail. Used for Best_Effort delivery. If Q is full,
    --  the oldest element is removed first and Dropped is True. This
-   --  procedure always adds Item.
+   --  procedure always adds Item. All other elements stay in Q, in the
+   --  same order.
    procedure Push_Dropping_Oldest
      (Q       : in out Queue_Type;
       Item    : Element_Type;
       Dropped : out Boolean)
      with Post => Dropped = Is_Full (Q'Old)
-                  and then Count (Q) = (if Dropped then Count (Q'Old) else Count (Q'Old) + 1);
+                  and then Count (Q) = (if Dropped then Count (Q'Old) else Count (Q'Old) + 1)
+                  and then Element_At (Q, Count (Q)) = Item
+                  and then (for all K in 1 .. Count (Q) - 1 =>
+                              Element_At (Q, K) =
+                                Element_At (Q'Old, (if Dropped then K + 1 else K)));
 
    --  Removes the oldest element and returns it in Item. The caller must
-   --  make sure that Q is not empty.
+   --  make sure that Q is not empty. All other elements stay in Q, in the
+   --  same order.
    procedure Pop (Q : in out Queue_Type; Item : out Element_Type)
      with Pre  => not Is_Empty (Q),
-          Post => Count (Q) = Count (Q'Old) - 1;
+          Post => Count (Q) = Count (Q'Old) - 1
+                  and then Item = Element_At (Q'Old, 1)
+                  and then (for all K in 1 .. Count (Q) =>
+                              Element_At (Q, K) = Element_At (Q'Old, K + 1));
 
 private
 
@@ -97,7 +118,17 @@ private
                   (if Is_Occupied (Q, I) then Q.Buffer (I)'Initialized)))
      with Ghost;
 
+   --  The slot of the K-th oldest element: Head + K - 1, with
+   --  wraparound. It has no mod and cannot overflow.
+   function Slot (Q : Queue_Type; K : Positive) return Ring_Index is
+     (if K - 1 < Depth - Q.Head then Q.Head + (K - 1) else (K - 1) - (Depth - Q.Head))
+     with Ghost,
+          Pre => K <= Depth;
+
    function Count (Q : Queue_Type) return Natural is (Q.Fill);
+
+   function Element_At (Q : Queue_Type; K : Positive) return Element_Type is
+     (Q.Buffer (Slot (Q, K)));
 
    pragma Warnings (Off, "component ""Buffer"" of type ""Element_Array"" is uninitialized");
    Empty_Queue : constant Queue_Type := (Buffer => <>, Head => 0, Tail => 0, Fill => 0);
