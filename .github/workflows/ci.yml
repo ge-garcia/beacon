@@ -21,6 +21,15 @@ jobs:
         run: |
           printf 'pragma Profile (Jorvik);\n' > "$RUNNER_TEMP/jorvik.adc"
           alr -n exec -- gcc -c -gnat2022 -gnatc -gnatec="$RUNNER_TEMP/jorvik.adc" -Isrc src/*.ads src/*.adb
+      - name: Build for the Raspberry Pi Pico (RP2040)
+        run: |
+          cd board
+          alr -n build
+      - name: Keep the board ELF
+        uses: actions/upload-artifact@v4
+        with:
+          name: board-elf
+          path: board/bin/board_blink
       - name: Tests
         run: |
           cd tests

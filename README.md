@@ -103,12 +103,13 @@ Read `ARCHITECTURE.md` before you change the code.
 
 ## Build
 
-The project has four [Alire](https://alire.ada.dev) crates. The demo,
-test and proof crates pin the library by path.
+The project has five [Alire](https://alire.ada.dev) crates. The demo,
+test, proof and board crates pin the library by path.
 
 ```
 alr build                           # library, with src/net
 BEACON_NETWORK=no alr build         # library, in-process only
+cd board && alr build               # Raspberry Pi Pico (RP2040): bin/board_blink
 cd tests && alr build && ./bin/queue_tests && ./bin/topic_tests && ./bin/wire_tests
 cd demo  && alr build && ./bin/inproc_demo
 # two terminals:
