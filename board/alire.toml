@@ -1,0 +1,28 @@
+name = "beacon_board"
+description = "beacon on the Raspberry Pi Pico (RP2040)"
+executables = ["board_blink"]
+version = "0.1.0-dev"
+authors = ["Gabriel Garcia"]
+maintainers = ["Olivier Henley <henley@adacore.com>"]
+maintainers-logins = ["ohenley"]
+licenses = "Apache-2.0"
+
+project-files = ["board.gpr"]
+
+[[depends-on]]
+beacon = "*"
+gnat_arm_elf = "=16.1.0"
+light_tasking_rp2040 = "^16.0.0"
+pico_bsp = "^2.2.0"
+rp2040_hal = "^2.7.1"
+
+[[pins]]
+beacon = { path = ".." }
+
+[configuration.values]
+light_tasking_rp2040.Board = "rpi_pico"
+rp2040_hal.Interrupts = "bb_runtimes"
+rp2040_hal.Use_Startup = false
+
+[gpr-set-externals]
+BEACON_NETWORK = "no"

@@ -39,7 +39,14 @@ repository root. Each step must pass before you report that a change is done.
    alr -n exec -- gcc -c -gnat2022 -gnatc -gnatec=/tmp/jorvik.adc -Isrc src/*.ads src/*.adb
    ```
 
-4. Build and run the tests:
+4. Build the board program for the Raspberry Pi Pico (RP2040):
+
+   ```sh
+   cd board
+   alr -n build
+   ```
+
+5. Build and run the tests:
 
    ```sh
    cd tests
@@ -49,7 +56,7 @@ repository root. Each step must pass before you report that a change is done.
    ./bin/wire_tests
    ```
 
-5. Build and run the in-process demo:
+6. Build and run the in-process demo:
 
    ```sh
    cd demo
@@ -57,7 +64,7 @@ repository root. Each step must pass before you report that a change is done.
    ./bin/inproc_demo
    ```
 
-6. Run SPARK flow analysis and the proof from the `prove/` crate:
+7. Run SPARK flow analysis and the proof from the `prove/` crate:
 
    ```sh
    cd prove
@@ -68,7 +75,8 @@ repository root. Each step must pass before you report that a change is done.
 ## Rules
 
 - The compiler treats warnings as errors (`-gnatwe`). Fix the cause of a
-  warning. Do not suppress it.
+  warning. Do not suppress it. The one exception is `-gnatw.X` for the
+  board runtime. `beacon.gpr` gives the reason.
 - Do not weaken a contract, an invariant, or a test to make a check pass.
 - This repository is a fork. Open pull requests against `ge-garcia/beacon`.
   Do not open a pull request against `GNAT-Academic-Program/beacon`.
