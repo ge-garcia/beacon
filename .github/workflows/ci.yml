@@ -65,3 +65,29 @@ jobs:
         with:
           name: gnatprove-out
           path: prove/obj/gnatprove/gnatprove.out
+
+  board-emulation:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the board ELF
+        uses: actions/download-artifact@v4
+        with:
+          name: board-elf
+          path: board/bin
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Renode 1.16.1 and the RP2040 model
+        run: |
+          curl -sSL https://github.com/renode/renode/releases/download/v1.16.1/renode-1.16.1.linux-portable-dotnet.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP"
+          pip install -q -r "$RUNNER_TEMP/renode_1.16.1-dotnet_portable/tests/requirements.txt"
+          git clone -q https://github.com/matgla/Renode_RP2040 "$RUNNER_TEMP/rp2040"
+          git -C "$RUNNER_TEMP/rp2040" checkout -q 5aca847c9f57ed96603e55d28e8ceeefa09e55f6
+      - name: Run the board program on an emulated RP2040
+        env:
+          RP2040_MODEL: ${{ runner.temp }}/rp2040
+        run: |
+          "$RUNNER_TEMP/renode_1.16.1-dotnet_portable/renode-test" board/renode/blink.robot
