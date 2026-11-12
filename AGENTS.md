@@ -20,6 +20,9 @@ the `SKILL.md` file of the skill before you start the task.
 `.github/workflows/ci.yml` is the source for these steps. Run them from the
 repository root. Each step must pass before you report that a change is done.
 
+> [!NOTE]
+> Renode job requires x86_64 Linux
+
 1. Build the library:
 
    ```sh
