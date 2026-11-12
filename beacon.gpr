@@ -19,10 +19,16 @@ library project Beacon is
    for Library_Dir use "lib/" & Network;
    for Create_Missing_Dirs use "True";
 
+   --  -gnatw.X: the board runtime (board/) has No_Exception_Propagation.
+   --  There, a failed check calls the last chance handler, and GNAT warns
+   --  at each check that can fail. If each caller obeys the
+   --  preconditions, the proof shows that no check in Beacon.Queue fails.
+   --  Beacon.Topic has no proof. If one of its checks fails, the program
+   --  stops. On other runtimes, -gnatw.X has no effect.
    package Compiler is
       for Default_Switches ("Ada") use
         ("-gnat2022", "-gnata", "-gnatwa", "-gnatwe", "-gnatVa",
-         "-gnatyg", "-gnatyM100", "-g", "-O1", "-fstack-check");
+         "-gnatyg", "-gnatyM100", "-g", "-O1", "-fstack-check", "-gnatw.X");
    end Compiler;
 
    package Binder is
