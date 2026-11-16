@@ -181,7 +181,33 @@ the queue. Empty or oversized sends raise `Constraint_Error`. A receive
 buffer that is too small discards its datagram and raises
 `Constraint_Error`.
 
-A serial transport is planned for milestone 5.
+### Serial framing
+
+`Beacon.Transport.Serial` implements the same interface on POSIX serial
+devices. Each transmission is `00 | COBS(wire frame) | 00`. The wire header,
+payload, and CRC-32 remain unchanged.
+
+A length prefix has low overhead but a damaged length can hide later frame
+boundaries. A delimiter restores synchronization at the next boundary.
+Plain delimiter escaping can double the body size.
+COBS gives bounded overhead and preserves every byte value.
+`Beacon.Framing` implements COBS in SPARK with fixed buffers. A 1038-byte
+wire frame needs at most 1043 encoded bytes, plus two delimiters.
+
+The receiver first seeks a zero delimiter. It ignores empty delimiters,
+retains partial bodies across timeouts, and discards malformed bodies.
+An oversized body is discarded through the next zero. Wire decoding then
+checks the existing CRC; COBS itself does not detect every corruption.
+Neither framing nor the serial transport adds acknowledgements or retries.
+
+Open configures raw 115200-baud 8N1 with software and hardware flow control
+disabled. One task may send while one task receives. Stop the bridge before
+closing the device. Send has a two-second deadline; an error may leave a
+partial frame. A subsequent Send starts with a zero to restore framing.
+
+The framing proof checks runtime safety, termination, and the stated buffer
+contracts. Round-trip behavior is tested separately; it is not a proved
+functional equivalence theorem. The C device adapter is outside SPARK.
 
 ## Codecs
 

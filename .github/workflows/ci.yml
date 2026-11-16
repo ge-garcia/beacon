@@ -30,6 +30,7 @@ jobs:
           timeout 10s ./bin/topic_tests
           timeout 75s ./bin/topic_load_tests 60
           ./bin/wire_tests
+          ./bin/framing_tests
           timeout 10s ./bin/transport_tests
           timeout 10s ./bin/bridge_tests
           timeout 10s ./bin/bridge_startup_tests
@@ -42,6 +43,9 @@ jobs:
           cd demo
           alr -n build
           ./bin/inproc_demo
+      - name: Serial demo and recovery tests over PTYs
+        timeout-minutes: 2
+        run: python3 tests/scripts/serial_pty.py
       - name: UDP demo, two processes on loopback
         run: |
           cd demo
@@ -54,6 +58,11 @@ jobs:
       - name: SPARK flow analysis
         working-directory: prove
         run: alr -n exec -- gnatprove -P ../beacon.gpr --mode=flow --checks-as-errors=on
+      - name: SPARK proof of Beacon.Framing
+        working-directory: prove
+        run: >-
+          alr -n exec -- gnatprove -P ../beacon.gpr -u beacon-framing.adb
+          --mode=all --level=1 --checks-as-errors=on
       - name: SPARK proof of Beacon.Queue
         working-directory: prove
         run: alr -n exec -- gnatprove -P beacon_prove.gpr --mode=all --checks-as-errors=on
@@ -62,4 +71,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gnatprove-out
-          path: prove/obj/gnatprove/gnatprove.out
+          path: |
+            prove/obj/gnatprove/gnatprove.out
+            obj/yes/gnatprove/gnatprove.out

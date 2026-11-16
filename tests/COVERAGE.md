@@ -77,3 +77,20 @@ The load test checks message counts and order as well as `Dropped = 0`.
 
 The load test waits for each publisher to finish before it accepts an empty
 queue as fully drained.
+
+## Serial link
+
+| Behavior | Test | Status |
+| --- | --- | --- |
+| COBS round trips for every length from 0 through 1038 | framing_tests | Tested |
+| Zero, nonzero, and mixed bytes; 254-byte block boundaries | framing_tests | Tested |
+| Reference encoding and malformed or oversized decode rejection | framing_tests | Tested |
+| Startup mid-frame, malformed body, overflow recovery | serial_pty.py | Tested |
+| Partial frame survives timeout; adjacent frames remain separate | serial_pty.py | Tested |
+| CRC-corrupted wire frame rejected, following valid frame decoded | serial_pty.py | Tested |
+| Binary transparency, non-1-based buffer, send encoding | serial_pty.py | Tested |
+| Two bridge processes deliver 200 values in order | serial_pty.py | Tested |
+| Physical UART and electrical settings | Requires serial hardware | Pending |
+
+CI runs both framing_tests and serial_pty.py. PTY tests require POSIX
+pseudo-terminals; they do not use a physical UART.

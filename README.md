@@ -6,7 +6,7 @@ Typed publish-subscribe messaging in Ada.
   `Telemetry_Topic` receives `Telemetry.Reading` values, not bytes.
 - Each subscriber has a bounded protected queue.
 - Each subscriber has one of two delivery modes: Reliable or Best_Effort.
-- A UDP multicast bridge connects processes on a desktop.
+- UDP multicast and serial transports connect processes on a desktop.
 
 GNAT Academic Program capstone project. Proposal title: _Beacon: Typed
 Publish-Subscribe Messaging_.
@@ -173,3 +173,39 @@ Discord.
 ## License
 
 Apache-2.0. See `LICENSE`.
+
+## Serial link demo
+
+The POSIX serial transport uses 115200 baud, 8 data bits, no parity,
+one stop bit, and no flow control. It supports macOS and Linux devices.
+
+Build the tests and demo, then run the virtual serial link:
+
+```sh
+(cd tests && alr -n build)
+(cd demo && alr -n build)
+./tests/bin/framing_tests
+python3 tests/scripts/serial_pty.py
+```
+
+The script checks recovery and delivers 200 readings between two programs
+over a pseudo-terminal (PTY) pair. It checks each reading's value and order.
+
+For a physical link, connect compatible UART adapters with crossed TX/RX
+and a common ground. Run the subscriber before the publisher. Replace
+`DEVICE` with each machine's serial device path:
+
+```sh
+./demo/bin/serial_subscriber DEVICE 200
+./demo/bin/serial_publisher DEVICE 200
+```
+
+A PTY test does not verify UART hardware. Record a successful physical-link
+run separately for the showcase.
+
+Run the framing proof from the proof crate:
+
+```sh
+cd prove
+alr -n exec -- gnatprove -P ../beacon.gpr -u beacon-framing.adb --mode=all --level=1 --checks-as-errors=on
+```

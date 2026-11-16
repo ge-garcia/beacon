@@ -8,8 +8,12 @@ library project Beacon is
    Network : Yes_No := external ("BEACON_NETWORK", "yes");
 
    case Network is
-      when "yes" => for Source_Dirs use ("src", "src/net");
-      when "no"  => for Source_Dirs use ("src");
+      when "yes" =>
+         for Source_Dirs use ("src", "src/net");
+         for Languages use ("Ada", "C");
+      when "no" =>
+         for Source_Dirs use ("src");
+         for Languages use ("Ada");
    end case;
 
    for Library_Name use "beacon";
@@ -20,6 +24,7 @@ library project Beacon is
    for Create_Missing_Dirs use "True";
 
    package Compiler is
+      for Default_Switches ("C") use ("-Wall", "-Wextra", "-Werror", "-O1");
       for Default_Switches ("Ada") use
         ("-gnat2022", "-gnata", "-gnatwa", "-gnatwe", "-gnatVa",
          "-gnatyg", "-gnatyM100", "-g", "-O1", "-fstack-check");
@@ -30,7 +35,7 @@ library project Beacon is
    end Binder;
 
    --  cd prove && alr exec -- gnatprove -P beacon_prove.gpr
-   --  Only Beacon and Beacon.Queue carry SPARK_Mode => On.
+   --  Beacon.Queue and Beacon.Framing are proof targets.
    package Prove is
       for Proof_Switches ("Ada") use ("--level=2", "--timeout=30", "-j0");
    end Prove;

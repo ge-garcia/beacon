@@ -1,6 +1,6 @@
 name = "beacon_tests"
 description = "beacon unit tests"
-executables = ["queue_tests", "topic_tests", "topic_load_tests", "wire_tests",
+executables = ["framing_tests", "serial_transport_tests", "queue_tests", "topic_tests", "topic_load_tests", "wire_tests",
                "transport_tests", "bridge_tests", "bridge_startup_tests", "bridge_ingress_tests",
                "bridge_shutdown_tests", "bridge_receive_shutdown_tests"]
 version = "0.1.0-dev"
