@@ -50,7 +50,7 @@ demo/telemetry-codecs        Serialize/Deserialize by overlay of a rep-claused r
 demo/inproc_demo             1 kHz sensor + 10 Hz controller, checks both modes, exits non-zero on failure
 demo/net_publisher           sends readings over UDP ...
 demo/net_subscriber          ... receives them, checks CRC, counts sequence gaps
-tests/                       queue (wrap, drop-oldest), topic (fan-out, overflow), wire (CRC vector, rejects)
+tests/                       queue, topic (including blocking and multi-topic load), wire, transport, bridge
 ```
 
 Set `BEACON_NETWORK=no` to build without `src/net/`. Use this for
@@ -71,10 +71,12 @@ Read `ARCHITECTURE.md` before you change the code.
    This is a small package and the first real proof. It uses
    `Relaxed_Initialization` on `Buffer` and a type invariant.
 2. **Blocking behavior under load.**
-   - Write a test where a Reliable subscriber is full. The publisher must
-     block in `Publish`, and must continue when the subscriber reads.
-   - Write a load test: N tasks for some minutes. At the end,
-     `Dropped (Reliable)` must be 0. This must be true in each run.
+   - `topic_tests` checks that `Publish` blocks on a full Reliable queue
+     and resumes when the subscriber reads.
+   - `topic_load_tests` runs four publishers on separate topics for two
+     seconds by default. Pass a duration in seconds for longer runs.
+     Every run must have no missing messages and
+     `Dropped (Reliable) = 0` on every topic.
 3. **Decide the open decisions** (below). Then change the code to agree
    with each decision.
 4. **Make the bridge honest.**
@@ -109,7 +111,7 @@ test and proof crates pin the library by path.
 ```
 alr build                           # library, with src/net
 BEACON_NETWORK=no alr build         # library, in-process only
-cd tests && alr build && ./bin/queue_tests && ./bin/topic_tests && ./bin/wire_tests
+cd tests && alr build && ./bin/queue_tests && ./bin/topic_tests && ./bin/topic_load_tests && ./bin/wire_tests
 cd demo  && alr build && ./bin/inproc_demo
 # two terminals:
 ./bin/net_subscriber 239.255.0.1 5000 5
@@ -120,6 +122,26 @@ cd prove && alr exec -- gnatprove -P beacon_prove.gpr            # SPARK proof o
 
 Each build checks contracts at runtime (`-gnata`). Each build treats
 warnings as errors.
+
+`topic_load_tests` runs four publisher tasks on four separate topics, each
+with a slow Reliable subscriber. It defaults to two seconds, including in
+CI. Pass a positive integer argument to select the duration in seconds.
+Run from `tests/`:
+
+```
+./bin/topic_load_tests       # two-second default
+./bin/topic_load_tests 60    # optional one-minute run
+./bin/topic_load_tests 180   # optional three-minute run
+```
+
+To repeat the one-minute load test, run:
+
+```
+for run in 1 2 3; do timeout 75s ./bin/topic_load_tests 60 || exit 1; done
+```
+
+Each run fails unless every topic receives every published message in order,
+its Reliable queue drains, and `Dropped` is zero.
 
 ## Design rules
 

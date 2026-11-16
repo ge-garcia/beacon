@@ -3,9 +3,9 @@
 ## Bridge regression coverage
 
 Status is based on local execution. Remote CI verification is pending.
-All four bridge executables run in CI alongside queue, topic, and wire tests.
-The transports below are test-only capture/gated transports. They do not replace
-or incorporate the teammate's unmerged reusable loopback transport.
+All four bridge regression executables run in CI alongside the existing suites.
+The regression tests use test-only capture/gated transports. The existing
+transport and bridge suites exercise the reusable loopback transport.
 
 | Behavior | Test executable | Status |
 | --- | --- | --- |
@@ -24,7 +24,7 @@ or incorporate the teammate's unmerged reusable loopback transport.
 | Stop before any Start | Not covered | Pending |
 | Worker exits through a transport/codec exception | Not covered | Pending |
 | Both directions running in one bridge instantiation | Not covered | Pending |
-| Reusable loopback transport integration | Teammate branch not merged | Pending |
+| Reusable loopback transport integration | transport_tests and bridge_tests | Tested |
 | Real LAN loss between two hosts | Requires two hosts | Pending |
 
 The startup test publishes without sleeping or polling for readiness, then
@@ -61,3 +61,19 @@ Production working files were not replaced by these temporary variants.
 queue_tests, topic_tests, and wire_tests pass locally. This document does not
 claim exhaustive queue, topic, wire, or bridge coverage. Pending bridge rows
 mean the full M4 coverage exit criterion is not yet satisfied.
+
+| Test | Behavior checked |
+| --- | --- |
+| `queue_tests` | FIFO wraparound, bounded fill, and drop-oldest behavior. |
+| `topic_tests` | Typed fan-out, best-effort overflow, nonblocking operations, and a full Reliable queue blocking `Publish` until `Receive` frees a slot. |
+| `topic_load_tests` | Four independent topics publish concurrently; each Reliable subscriber receives every message in order with no drops after sustained backpressure. The duration defaults to two seconds and CI runs it for 60 seconds. A positive integer argument selects the duration in seconds. |
+| `wire_tests` | Wire encoding, decoding, CRC, and rejection of invalid frames. |
+| `transport_tests` | Loopback transport delivery, bounds, and full-queue behavior. |
+| `bridge_tests` | Local bridge delivery, frame rejection, sequence gaps, and saturated egress retry. |
+
+The load test checks message counts and order as well as `Dropped = 0`.
+`Dropped = 0` alone does not prove that a message arrived, because
+`Try_Publish` can refuse delivery to a full Reliable queue.
+
+The load test waits for each publisher to finish before it accepts an empty
+queue as fully drained.
