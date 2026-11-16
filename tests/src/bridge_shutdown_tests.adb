@@ -1,5 +1,7 @@
 --  Issue #18: Stop must wait for a held transport operation to finish.
 
+with Ada.Exceptions;
+with Shutdown_Test_Support; use Shutdown_Test_Support;
 with Ada.Text_IO; use Ada.Text_IO;
 with Beacon; use Beacon;
 with Beacon.Bridge;
@@ -29,42 +31,7 @@ procedure Bridge_Shutdown_Tests is
 
    package Bridge is new Beacon.Bridge (Local, 7, Serialize, Deserialize);
 
-   protected Gate is
-      procedure Enter_Send;
-      entry Wait_Entered;
-      entry Await_Release;
-      procedure Release_Send;
-      function Finished return Boolean;
-      procedure Finish_Send;
-   private
-      Entered  : Boolean := False;
-      Released : Boolean := False;
-      Done     : Boolean := False;
-   end Gate;
-
-   protected body Gate is
-      procedure Enter_Send is
-      begin
-         Entered := True;
-      end Enter_Send;
-      entry Wait_Entered when Entered is
-      begin
-         null;
-      end Wait_Entered;
-      entry Await_Release when Released is
-      begin
-         null;
-      end Await_Release;
-      procedure Release_Send is
-      begin
-         Released := True;
-      end Release_Send;
-      function Finished return Boolean is (Done);
-      procedure Finish_Send is
-      begin
-         Done := True;
-      end Finish_Send;
-   end Gate;
+   Gate : Operation_Gate;
 
    type Capture_Transport is limited new Beacon.Transport.Transport with null record;
    overriding procedure Send (T : in out Capture_Transport; Frame : Byte_Array);
@@ -75,9 +42,9 @@ procedure Bridge_Shutdown_Tests is
    overriding procedure Send (T : in out Capture_Transport; Frame : Byte_Array) is
       pragma Unreferenced (T, Frame);
    begin
-      Gate.Enter_Send;
+      Gate.Enter_Operation;
       Gate.Await_Release;
-      Gate.Finish_Send;
+      Gate.Finish_Operation;
    end Send;
 
    overriding procedure Receive
@@ -105,6 +72,9 @@ procedure Bridge_Shutdown_Tests is
       accept Go;
       Bridge.Stop;
       accept Finished;
+   exception
+      when Error : others =>
+         Fail ("Stopper: " & Ada.Exceptions.Exception_Information (Error));
    end Stopper;
 
 begin
@@ -121,30 +91,29 @@ begin
       Gate.Wait_Entered;
    or
       delay 2.0;
-      Gate.Release_Send;
-      Stopper.Go;
-      Stopper.Finished;
-      raise Program_Error with "egress did not enter Send";
+      Fail ("egress did not enter Send");
    end select;
+   --  Start Stop only after the transport operation has entered the gate.
    Stopper.Go;
-   --  Send is held by a barrier, not a guessed transport delay.
+   --  Send is held by the gate. Stop must remain blocked for this window.
    select
       Stopper.Finished;
       Early := True;
    or
       delay 0.1;
    end select;
-   Gate.Release_Send;
+   --  Releasing the operation must let Stop finish within two seconds.
+   Gate.Release_Operation;
    if not Early then
       select
          Stopper.Finished;
       or
          delay 2.0;
-         raise Program_Error with "Stop did not finish after Send returned";
+         Fail ("Stop did not finish after Send returned");
       end select;
    end if;
    if Early or else not Gate.Finished or else not Refused then
-      raise Program_Error with "shutdown coordination or duplicate start failed";
+      Fail ("shutdown coordination or duplicate start failed");
    end if;
    Refused := False;
    begin
@@ -154,8 +123,11 @@ begin
          Refused := True;
    end;
    if not Refused then
-      raise Program_Error with "restart after Stop was accepted";
+      Fail ("restart after Stop was accepted");
    end if;
    Bridge.Stop;
    Put_Line ("bridge shutdown: waits for Send; rejects duplicate start and restart");
+exception
+   when Error : others =>
+      Fail (Ada.Exceptions.Exception_Information (Error));
 end Bridge_Shutdown_Tests;

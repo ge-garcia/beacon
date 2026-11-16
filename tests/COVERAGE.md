@@ -37,6 +37,12 @@ window while the barrier is closed, and must complete after release. This
 makes the operation's lifetime explicit, although thread scheduling still
 applies to the observing task. CI should retain an overall job timeout.
 
+Both shutdown tests use `Shutdown_Test_Support.Operation_Gate`. The test
+waits for entry, starts Stop, checks that Stop stays blocked, releases the
+operation, and waits for completion. `Fail` prints and flushes a diagnostic
+then exits with status 1. It does not wait for the Stopper task or call Stop
+again, because either action could hide the failure behind a hung task.
+
 ## Negative controls (2026-11-04)
 
 Temporary source copies were built with three intentional regressions. Each
