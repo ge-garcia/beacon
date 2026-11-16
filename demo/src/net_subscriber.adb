@@ -55,6 +55,8 @@ begin
       if Clock >= Next_Report then
          Put_Line ("  received" & Seen'Image & ", last seq" & Last'Image
                    & ", dropped locally" & Temperature_Topic.Dropped (Sub)'Image
+                   & ", incomplete local deliveries"
+                   & Temperature_Bridge.Local_Delivery_Failures'Image
                    & ", rejected frames" & Temperature_Bridge.Rejected_Frames'Image
                    & ", sequence gaps" & Temperature_Bridge.Sequence_Gaps'Image);
          Next_Report := Next_Report + Milliseconds (500);

@@ -21,10 +21,13 @@
 --  They are supplied per instantiation, expected to be an overlay of a
 --  record with a representation clause (design rule 6), not hand-packing.
 --
---  One egress and one ingress per instantiation, each a task started
---  on demand. Stop asks both to finish; they exit after their current
---  operation (Ingress polls at 100 ms, idle Egress at 1 ms). Keep the
---  transport alive until the tasks terminate; Stop does not join them.
+
+--  One egress and one ingress per instantiation, each started
+--  on demand. Stop asks both to finish and waits for the tasks to
+--  terminate after their current operations complete (Ingress polls
+--  at 100 ms, idle Egress at 1 ms) Keeps transport alive until Stop
+--  is returned. Egress registration remains allocated for topic lifetime.
+--  Stop will not drain pending outgoing messages.
 
 with Beacon.Topic;
 with Beacon.Wire;
@@ -44,20 +47,33 @@ generic
 package Beacon.Bridge is
 
    --  Forward local publications to T. Registers a local Subscriber in
-   --  Mode; counts toward Max_Subscribers. Registered before this returns.
-   --  Transient transport saturation retries the same frame until sent or Stop.
+   --  Mode; counts toward Max_Subscribers. Registration is complete when
+   --  procedure returns. Transient transport saturation retires the same frame
+   --  until sent or Stop is requested. Recurrent startup or startup after Stop is
+   --  not supported.
+
    procedure Start_Egress
      (T    : not null access Transport.Transport'Class;
       Mode : Delivery_Mode)
      with Pre => Local.Subscriber_Count < Local.Max_Subscribers;
 
    --  Publish frames arriving on T (with matching Topic_Id) locally.
-   --  Takes the local Publisher slot before this returns.
+   --  Takes local Publisher slot before returning, the start being one-shot
+
    procedure Start_Ingress
      (T : not null access Transport.Transport'Class)
      with Pre => not Local.Has_Publisher;
 
+   --  Request shutdown and wait for both workers to terminate. Idempotent,
+   --  including before startup. Pending egress messages are not drained.
+   --  An in-flight operation may finish; transport/codec calls must return
+   --  for this wait to finish. Close the transport only after this returns.
    procedure Stop;
+
+   --  Incoming messages refused by at least one full Reliable subscriber.
+   --  Counts incomplete publications, not individual subscriber refusals.
+   --  Other subscribers may have received the message. Lifetime cumulative.
+   function Local_Delivery_Failures return Natural;
 
    --  Frames received with a bad status or a foreign Topic_Id.
    function Rejected_Frames return Natural;
