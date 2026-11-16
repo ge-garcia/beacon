@@ -70,6 +70,7 @@ Read `ARCHITECTURE.md` before you change the code.
 
    This is a small package and the first real proof. It uses
    `Relaxed_Initialization` on `Buffer` and a type invariant.
+
 2. **Blocking behavior under load.**
    - `topic_tests` checks that `Publish` blocks on a full Reliable queue
      and resumes when the subscriber reads.
@@ -105,13 +106,14 @@ Read `ARCHITECTURE.md` before you change the code.
 
 ## Build
 
-The project has four [Alire](https://alire.ada.dev) crates. The demo,
-test and proof crates pin the library by path.
+The project has five [Alire](https://alire.ada.dev) crates. The demo,
+test, proof and board crates pin the library by path.
 
 ```
 alr build                           # library, with src/net
 BEACON_NETWORK=no alr build         # library, in-process only
 cd tests && alr build && ./bin/queue_tests && ./bin/topic_tests && ./bin/topic_load_tests && ./bin/wire_tests
+cd board && alr build               # Raspberry Pi Pico (RP2040): bin/board_blink
 cd demo  && alr build && ./bin/inproc_demo
 # two terminals:
 ./bin/net_subscriber 239.255.0.1 5000 5
