@@ -113,10 +113,89 @@ begin
    end loop;
    Check (In_Order, "Try_Receive returns the oldest, Pending decreases by 1");
 
-   --  TODO (weeks 5-8): blocking Publish on a full Reliable queue, from a
-   --  separate task, verified to unblock when the subscriber drains.
-   --  TODO (weeks 9-12): load test, N publishers tasks, sustained
-   --  overflow, assert Dropped (Rel) = 0 at the end. Always.
+   --  A full Reliable queue must block Publish until Receive frees a slot.
+   declare
+      package R_Topic is new Beacon.Topic
+        (Message_Type => Reading, Queue_Depth => Depth, Max_Subscribers => 1);
+
+      R_Pub    : R_Topic.Publisher;
+      R_Sub    : aliased R_Topic.Subscriber (Reliable);
+      Started  : Boolean := False;
+      Finished : Boolean := False;
+
+      task Blocked_Publisher is
+         entry Start;
+         entry Done;
+      end Blocked_Publisher;
+
+      task body Blocked_Publisher is
+      begin
+         accept Start;
+         R_Topic.Publish (R_Pub, (Id => Depth + 1, Value => Float (Depth + 1)));
+         accept Done;
+      end Blocked_Publisher;
+   begin
+      R_Topic.Create_Publisher (R_Pub);
+      R_Topic.Create_Subscriber (R_Sub);
+      for I in 1 .. Depth loop
+         R_Topic.Publish (R_Pub, (Id => I, Value => Float (I)));
+      end loop;
+      Check (R_Topic.Pending (R_Sub) = Depth, "reliable queue filled for blocking Publish");
+
+      select
+         Blocked_Publisher.Start;
+         Started := True;
+      or
+         delay 1.0;
+         Check (False, "reliable publisher starts");
+      end select;
+
+      if Started then
+         --  The publisher accepts Done only after Publish returns. A timeout
+         --  here shows that the full queue keeps the publisher waiting.
+         select
+            Blocked_Publisher.Done;
+            Finished := True;
+            Check (False, "reliable full: Publish blocks");
+         or
+            delay 0.1;
+            Check (True, "reliable full: Publish blocks");
+         end select;
+
+         if R_Topic.Pending (R_Sub) > 0 then
+            R_Topic.Receive (R_Sub, Msg);
+            Check (Msg = (Id => 1, Value => 1.0),
+                   "reliable: first value frees a slot");
+         else
+            Check (False, "reliable: first value frees a slot");
+         end if;
+
+         if not Finished then
+            select
+               Blocked_Publisher.Done;
+               Finished := True;
+               Check (True, "reliable: Publish resumes after Receive");
+            or
+               delay 1.0;
+               Check (False, "reliable: Publish resumes after Receive");
+            end select;
+         end if;
+
+         In_Order := True;
+         for Expected in 2 .. Depth + 1 loop
+            R_Topic.Try_Receive (R_Sub, Msg, Got);
+            In_Order := In_Order and then Got
+              and then Msg = (Id => Expected, Value => Float (Expected));
+         end loop;
+         Check (In_Order and then R_Topic.Pending (R_Sub) = 0,
+                "reliable blocked Publish preserves exact FIFO order");
+         Check (R_Topic.Dropped (R_Sub) = 0, "reliable blocked Publish drops nothing");
+      end if;
+
+      if not Finished then
+         abort Blocked_Publisher;
+      end if;
+   end;
 
    New_Line;
    if Failures = 0 then
