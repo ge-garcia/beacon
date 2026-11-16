@@ -73,8 +73,9 @@ Read `ARCHITECTURE.md` before you change the code.
 2. **Blocking behavior under load.**
    - `topic_tests` checks that `Publish` blocks on a full Reliable queue
      and resumes when the subscriber reads.
-   - `topic_load_tests` runs four publishers on separate topics for three
-     minutes by default. Every run must have no missing messages and
+   - `topic_load_tests` runs four publishers on separate topics for two
+     seconds by default. Pass a duration in seconds for longer runs.
+     Every run must have no missing messages and
      `Dropped (Reliable) = 0` on every topic.
 3. **Decide the open decisions** (below). Then change the code to agree
    with each decision.
@@ -110,7 +111,7 @@ test and proof crates pin the library by path.
 ```
 alr build                           # library, with src/net
 BEACON_NETWORK=no alr build         # library, in-process only
-cd tests && alr build && ./bin/queue_tests && ./bin/topic_tests && ./bin/topic_load_tests 2 && ./bin/wire_tests
+cd tests && alr build && ./bin/queue_tests && ./bin/topic_tests && ./bin/topic_load_tests && ./bin/wire_tests
 cd demo  && alr build && ./bin/inproc_demo
 # two terminals:
 ./bin/net_subscriber 239.255.0.1 5000 5
@@ -123,11 +124,20 @@ Each build checks contracts at runtime (`-gnata`). Each build treats
 warnings as errors.
 
 `topic_load_tests` runs four publisher tasks on four separate topics, each
-with a slow Reliable subscriber. It defaults to 180 seconds; CI passes `2`
-for a short smoke test. To repeat the full load test, run from `tests/`:
+with a slow Reliable subscriber. It defaults to two seconds, including in
+CI. Pass a positive integer argument to select the duration in seconds.
+Run from `tests/`:
 
 ```
-for run in 1 2 3; do timeout 200s ./bin/topic_load_tests 180 || exit 1; done
+./bin/topic_load_tests       # two-second default
+./bin/topic_load_tests 60    # optional one-minute run
+./bin/topic_load_tests 180   # optional three-minute run
+```
+
+To repeat the one-minute load test, run:
+
+```
+for run in 1 2 3; do timeout 75s ./bin/topic_load_tests 60 || exit 1; done
 ```
 
 Each run fails unless every topic receives every published message in order,

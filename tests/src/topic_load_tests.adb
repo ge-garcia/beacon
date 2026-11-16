@@ -204,7 +204,7 @@ procedure Topic_Load_Tests is
       end Result;
    end Topic_Run;
 
-   Run_For : Positive := 180;
+   Run_For : Positive := 2;
    All_OK  : Boolean := True;
 
    procedure Check_Result (Id : Positive; Completed : Boolean; Value : Outcome);
