@@ -22,13 +22,12 @@ package body Beacon.Bridge is
    task body Egress_Task is
       Sub      : constant Subscriber_Ref := new Local.Subscriber (Mode);
       Net      : Transport_Ref;
-      Msg      : Local.Message_Type;
+      Result   : Local.Msg_Result;
       Payload  : Wire.Byte_Array (1 .. Wire.Max_Payload);
       PL       : Natural;
       Frame    : Wire.Byte_Array (1 .. Wire.Max_Frame);
       FL       : Natural;
       Sequence : Wire.Sequence_Type := 0;
-      Got      : Boolean;
       use type Wire.Sequence_Type;
    begin
       accept Start (T : Transport_Ref) do
@@ -36,9 +35,9 @@ package body Beacon.Bridge is
          Local.Create_Subscriber (Sub.all);
       end Start;
       while not Stopping loop
-         Local.Try_Receive (Sub.all, Msg, Got);
-         if Got then
-            Serialize (Msg, Payload, PL);
+         Local.Try_Receive (Sub.all, Result);
+         if Result.Success then
+            Serialize (Result.Msg, Payload, PL);
             Wire.Encode (Topic_Id, Sequence, Payload (1 .. PL), Frame, FL);
 
             --  Would_Block means no frame was sent, so retry the same frame

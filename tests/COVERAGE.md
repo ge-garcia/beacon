@@ -65,7 +65,7 @@ mean the full M4 coverage exit criterion is not yet satisfied.
 | Test | Behavior checked |
 | --- | --- |
 | `queue_tests` | FIFO wraparound, bounded fill, and drop-oldest behavior. |
-| `topic_tests` | Typed fan-out, best-effort overflow, nonblocking operations, and a full Reliable queue blocking `Publish` until `Receive` frees a slot. |
+| `topic_tests` | Typed fan-out, best-effort overflow, nonblocking operations, receive timeouts in both delivery modes, and a full Reliable queue blocking `Publish` until `Receive` frees a slot. |
 | `topic_load_tests` | Four independent topics publish concurrently; each Reliable subscriber receives every message in order with no drops after sustained backpressure. The duration defaults to two seconds and CI runs it for 60 seconds. A positive integer argument selects the duration in seconds. |
 | `wire_tests` | Wire encoding, decoding, CRC, and rejection of invalid frames. |
 | `transport_tests` | Loopback transport delivery, bounds, and full-queue behavior. |
@@ -77,3 +77,27 @@ The load test checks message counts and order as well as `Dropped = 0`.
 
 The load test waits for each publisher to finish before it accepts an empty
 queue as fully drained.
+
+### Receive result and timeout coverage
+
+The receive tests in [`topic_tests.adb`](src/topic_tests.adb) check both
+`Reliable` and `Best_Effort` subscribers:
+
+- A default `Msg_Result` has `Success = False` and no message component.
+- An empty timed receive returns `Success = False`. A positive timeout waits at least its
+  requested interval. Zero and negative timeouts, including `Duration'First`,
+  poll once.
+- Queued typed messages return immediately in FIFO order. Each receive decreases
+  `Pending` by one, including with nonpositive timeouts.
+- A timeout leaves `Pending` and `Dropped` unchanged. Timed receives count no
+  drops. An expired receive does not consume later publications.
+- A delayed publication satisfies a waiting timed receive. `Duration'Last`
+  accepts both queued and delayed messages without deadline arithmetic overflow.
+- Timed and immediate receives preserve the payload predicate on success.
+  Empty results return normally without a predicate-check exception.
+  The predicate tests run with `pragma Initialize_Scalars`.
+- A result variable can hold a message and then an empty result.
+  An empty timed or immediate receive removes the previous message component.
+- Both receive operations reject constrained result objects before consuming a message.
+  The tests cover both constrained variants and verify later delivery through an unconstrained result.
+- An aliased unconstrained result supports successful and empty outcomes through both receive operations.

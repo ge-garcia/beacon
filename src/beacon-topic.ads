@@ -32,6 +32,17 @@ package Beacon.Topic is
    type Publisher is limited private;
    type Subscriber (Mode : Delivery_Mode) is limited private;
 
+   --  Contains Msg only when Success is True. The default result has no message.
+   --  Receive outputs must be unconstrained variables.
+   type Msg_Result (Success : Boolean := False) is record
+      case Success is
+         when True =>
+            Msg : Message_Type;
+         when False =>
+            null;
+      end case;
+   end record;
+
    ---------------
    -- Publisher --
    ---------------
@@ -92,18 +103,26 @@ package Beacon.Topic is
                   and then Is_Registered (S);
 
    --  Removes the oldest message from S and returns it in Msg. If S is
-   --  empty, Receive blocks until a message arrives. Receive has no
-   --  timeout.
+   --  empty, this overload blocks until a message arrives.
    procedure Receive (S : in out Subscriber; Msg : out Message_Type)
      with Pre => Is_Registered (S);
 
-   --  Same as Receive, but does not block. If S is empty, Success is
-   --  False and Msg is not set.
-   procedure Try_Receive
+   --  Removes the oldest message from S and returns it in Result.Msg with
+   --  Result.Success True. Timeout is in seconds. If S stays empty, returns
+   --  Result.Success False after Timeout. A nonpositive Timeout polls once.
+   --  An available message takes precedence over timeout expiry.
+   --
+   --  Polling adds up to 1 ms of latency. Task scheduling can extend the wait.
+   procedure Receive
      (S       : in out Subscriber;
-      Msg     : out Message_Type;
-      Success : out Boolean)
-     with Pre => Is_Registered (S);
+      Timeout : Duration;
+      Result  : out Msg_Result)
+     with Pre => Is_Registered (S) and then not Result'Constrained;
+
+   --  Removes the oldest message from S without waiting for data. If S is
+   --  empty, returns Result.Success False.
+   procedure Try_Receive (S : in out Subscriber; Result : out Msg_Result)
+     with Pre => Is_Registered (S) and then not Result'Constrained;
 
    --  Number of messages in the queue of S.
    function Pending (S : Subscriber) return Natural;
@@ -123,7 +142,7 @@ private
       entry Push (Msg : Message_Type);
       procedure Try_Push (Msg : Message_Type; Accepted : out Boolean);
       entry Pop (Msg : out Message_Type);
-      procedure Try_Pop (Msg : out Message_Type; Success : out Boolean);
+      procedure Try_Pop (Result : out Msg_Result);
       function Count return Natural;
       function Drop_Count return Natural;
    private

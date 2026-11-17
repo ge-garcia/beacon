@@ -33,10 +33,9 @@ procedure Net_Subscriber is
 
    Deadline : constant Time := Clock + Seconds (Secs);
    Next_Report : Time := Clock + Milliseconds (500);
-   R    : Reading;
-   Got  : Boolean;
-   Seen : Natural := 0;
-   Last : Natural := 0;
+   Result : Temperature_Topic.Msg_Result;
+   Seen   : Natural := 0;
+   Last   : Natural := 0;
 
 begin
    Beacon.Transport.UDP.Open (Net, Group, Port);
@@ -45,10 +44,10 @@ begin
    Put_Line ("net_subscriber: listening on " & Group & ":" & Port'Image);
 
    while Clock < Deadline loop
-      Temperature_Topic.Try_Receive (Sub, R, Got);
-      if Got then
+      Temperature_Topic.Try_Receive (Sub, Result);
+      if Result.Success then
          Seen := Seen + 1;
-         Last := R.Sequence;
+         Last := Result.Msg.Sequence;
       else
          delay 0.001;
       end if;
