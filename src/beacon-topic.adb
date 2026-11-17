@@ -1,3 +1,5 @@
+with Ada.Real_Time;
+
 package body Beacon.Topic is
 
    -------------------
@@ -52,11 +54,17 @@ package body Beacon.Topic is
          Update_Barriers;
       end Pop;
 
-      procedure Try_Pop (Msg : out Message_Type; Success : out Boolean) is
+      procedure Try_Pop (Result : out Msg_Result) is
       begin
-         Success := not Ring.Is_Empty (Q);
-         if Success then
-            Ring.Pop (Q, Msg);
+         if Ring.Is_Empty (Q) then
+            Result := (Success => False);
+         else
+            declare
+               Msg : Message_Type;
+            begin
+               Ring.Pop (Q, Msg);
+               Result := (Success => True, Msg => Msg);
+            end;
          end if;
          Update_Barriers;
       end Try_Pop;
@@ -134,12 +142,36 @@ package body Beacon.Topic is
       S.Queue.Pop (Msg);
    end Receive;
 
-   procedure Try_Receive
+   procedure Receive
      (S       : in out Subscriber;
-      Msg     : out Message_Type;
-      Success : out Boolean) is
+      Timeout : Duration;
+      Result  : out Msg_Result)
+   is
+      use Ada.Real_Time;
+
+      Started : constant Time := Clock;
+      Elapsed : Duration;
    begin
-      S.Queue.Try_Pop (Msg, Success);
+      loop
+         S.Queue.Try_Pop (Result);
+         if Result.Success then
+            return;
+         end if;
+
+         Elapsed := To_Duration (Clock - Started);
+         if Elapsed >= Timeout then
+            return;
+         end if;
+
+         --  Ravenscar and Jorvik forbid timed entry calls. Absolute delays
+         --  also avoid Ravenscar's restriction on relative delays.
+         delay until Clock + To_Time_Span (Duration'Min (0.001, Timeout - Elapsed));
+      end loop;
+   end Receive;
+
+   procedure Try_Receive (S : in out Subscriber; Result : out Msg_Result) is
+   begin
+      S.Queue.Try_Pop (Result);
    end Try_Receive;
 
    function Pending (S : Subscriber) return Natural is (S.Queue.Count);

@@ -80,14 +80,13 @@ procedure Bridge_Ingress_Tests is
       end select;
    end Receive;
 
-   Net   : aliased Capture_Transport;
-   Rel   : aliased Local.Subscriber (Reliable);
-   Rel_2 : aliased Local.Subscriber (Reliable);
-   Best  : aliased Local.Subscriber (Best_Effort);
-   Frame : Byte_Array (1 .. Max_Frame);
-   Last  : Natural;
-   Msg   : Byte;
-   Got   : Boolean;
+   Net    : aliased Capture_Transport;
+   Rel    : aliased Local.Subscriber (Reliable);
+   Rel_2  : aliased Local.Subscriber (Reliable);
+   Best   : aliased Local.Subscriber (Best_Effort);
+   Frame  : Byte_Array (1 .. Max_Frame);
+   Last   : Natural;
+   Result : Local.Msg_Result;
 
    procedure Check (Condition : Boolean; Name : String);
    procedure Check (Condition : Boolean; Name : String) is
@@ -124,12 +123,13 @@ begin
       delay 0.001;
    end loop;
    Check (Bridge.Local_Delivery_Failures = 1, "one incomplete publication counted");
-   Local.Try_Receive (Best, Msg, Got);
-   Check (Got and then Msg = 42, "other subscriber still receives latest message");
-   Local.Try_Receive (Rel, Msg, Got);
-   Check (Got and then Msg = 41, "reliable queue preserves first message");
-   Local.Try_Receive (Rel_2, Msg, Got);
-   Check (Got and then Msg = 41, "two refusals still count as one publication");
+   Local.Try_Receive (Best, Result);
+   Check (Result.Success and then Result.Msg = 42,
+          "other subscriber still receives latest message");
+   Local.Try_Receive (Rel, Result);
+   Check (Result.Success and then Result.Msg = 41, "reliable queue preserves first message");
+   Local.Try_Receive (Rel_2, Result);
+   Check (Result.Success and then Result.Msg = 41, "two refusals still count as one publication");
    Check (Local.Dropped (Rel) = 0, "local reliable drop count remains zero");
    Check (Bridge.Rejected_Frames = 0, "valid frame is not counted as rejected");
    Deliver (2, 43);
@@ -138,8 +138,8 @@ begin
       delay 0.001;
    end loop;
    Bridge.Stop;
-   Local.Try_Receive (Rel, Msg, Got);
-   Check (Got and then Msg = 43, "ingress continues after failed local delivery");
+   Local.Try_Receive (Rel, Result);
+   Check (Result.Success and then Result.Msg = 43, "ingress continues after failed local delivery");
    Check (Bridge.Local_Delivery_Failures = 1, "counter stays cumulative after recovery");
    Bridge.Stop;
    Put_Line ("bridge ingress tests passed");

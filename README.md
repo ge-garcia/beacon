@@ -90,16 +90,11 @@ Read `ARCHITECTURE.md` before you change the code.
 
 ## Open decisions (Week 4)
 
-1. `Try_Publish` when a Reliable subscriber is full. Option A (current):
-   partial delivery. The other subscribers get the message, and
-   `Delivered` is False. Option B: all-or-nothing.
-2. Registration is not task-safe. All registration must occur before the
+1. Registration is not task-safe. All registration must occur before the
    first `Publish`. Option A (current): keep this as a documented rule.
    Option B: make the registry a protected object. The in-process demo
    shows the failure: its tasks wait on a `Go` entry before they publish.
-3. `Receive` blocks and has no timeout. Option A (current): keep this.
-   Option B: add `Receive (S, Msg, Timeout, Success)`.
-4. The registry holds `Subscriber'Unchecked_Access`. If a subscriber is
+2. The registry holds `Subscriber'Unchecked_Access`. If a subscriber is
    declared in a scope that ends, the registry holds a dangling access.
    Option A (current): accept this, with the rule "declare subscribers at
    library level". Option B: change the design.
