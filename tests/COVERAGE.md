@@ -58,6 +58,9 @@ Production working files were not replaced by these temporary variants.
 
 ## Existing suites
 
+Run `alr test` from the repository root to build and run all ten executables.
+The runner stops on the first failure or timeout.
+
 queue_tests, topic_tests, and wire_tests pass locally. This document does not
 claim exhaustive queue, topic, wire, or bridge coverage. Pending bridge rows
 mean the full M4 coverage exit criterion is not yet satisfied.
