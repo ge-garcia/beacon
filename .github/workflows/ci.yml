@@ -32,19 +32,9 @@ jobs:
           path: board/bin/board_blink
       - name: Tests
         timeout-minutes: 5
-        run: |
-          cd tests
-          alr -n build
-          ./bin/queue_tests
-          timeout 10s ./bin/topic_tests
-          timeout 75s ./bin/topic_load_tests 60
-          ./bin/wire_tests
-          timeout 10s ./bin/transport_tests
-          timeout 10s ./bin/bridge_tests
-          timeout 10s ./bin/bridge_startup_tests
-          timeout 10s ./bin/bridge_ingress_tests
-          timeout 10s ./bin/bridge_shutdown_tests
-          timeout 10s ./bin/bridge_receive_shutdown_tests
+        env:
+          TOPIC_LOAD_SECONDS: "60"
+        run: alr -n -v test
 
       - name: In-process demo (reliable never drops, best-effort keeps newest)
         run: |

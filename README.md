@@ -112,7 +112,7 @@ test, proof and board crates pin the library by path.
 ```
 alr build                           # library, with src/net
 BEACON_NETWORK=no alr build         # library, in-process only
-cd tests && alr build && ./bin/queue_tests && ./bin/topic_tests && ./bin/topic_load_tests && ./bin/wire_tests
+alr test                            # build and run the host test suite
 cd board && alr build               # Raspberry Pi Pico (RP2040): bin/board_blink
 cd demo  && alr build && ./bin/inproc_demo
 # two terminals:
@@ -125,10 +125,17 @@ cd prove && alr exec -- gnatprove -P beacon_prove.gpr            # SPARK proof o
 Each build checks contracts at runtime (`-gnata`). Each build treats
 warnings as errors.
 
+Run `alr test` from the repository root with `BEACON_NETWORK` unset or set to
+`yes` to run all tests. You can see the log file or run `alr -v test` for more
+verbose output.
+
 `topic_load_tests` runs four publisher tasks on four separate topics, each
-with a slow Reliable subscriber. It defaults to two seconds, including in
-CI. Pass a positive integer argument to select the duration in seconds.
-Run from `tests/`:
+with a slow Reliable subscriber. It defaults to two seconds. CI sets
+`TOPIC_LOAD_SECONDS=60` for `alr test`. The runner limits the load test to
+75 seconds.
+
+To run the load test by itself, pass a positive integer to select the
+duration in seconds. Run from `tests/` after building the test crate:
 
 ```
 ./bin/topic_load_tests       # two-second default

@@ -9,3 +9,7 @@ website = "https://github.com/GNAT-Academic-Program/beacon"
 tags = ["pubsub", "messaging", "dds", "embedded", "spark", "gap"]
 
 project-files = ["beacon.gpr"]
+
+[[actions]]
+type = "test"
+command = ["sh", "tests/run.sh"]

@@ -52,11 +52,7 @@ repository root. Each step must pass before you report that a change is done.
 5. Build and run the tests:
 
    ```sh
-   cd tests
-   alr -n build
-   ./bin/queue_tests
-   ./bin/topic_tests
-   ./bin/wire_tests
+   TOPIC_LOAD_SECONDS=60 alr -n -v test
    ```
 
 6. Build and run the in-process demo:
