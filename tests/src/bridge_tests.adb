@@ -108,29 +108,27 @@ procedure Bridge_Tests is
    procedure Expect_Delivery (Expected : Byte);
    procedure Expect_Delivery (Expected : Byte) is
       Deadline : constant Time := Clock + Seconds (2);
-      Msg      : Byte;
-      Got      : Boolean;
+      Result   : Destination.Msg_Result;
    begin
       loop
-         Destination.Try_Receive (Sub, Msg, Got);
-         exit when Got or else Clock >= Deadline;
+         Destination.Try_Receive (Sub, Result);
+         exit when Result.Success or else Clock >= Deadline;
          delay 0.001;
       end loop;
-      Check (Got and then Msg = Expected, "typed messages delivered in order");
+      Check (Result.Success and then Result.Msg = Expected, "typed messages delivered in order");
    end Expect_Delivery;
 
    procedure Expect_Injected (Expected : Byte);
    procedure Expect_Injected (Expected : Byte) is
       Deadline : constant Time := Clock + Seconds (2);
-      Msg      : Byte;
-      Got      : Boolean;
+      Result   : Injected.Msg_Result;
    begin
       loop
-         Injected.Try_Receive (Checked, Msg, Got);
-         exit when Got or else Clock >= Deadline;
+         Injected.Try_Receive (Checked, Result);
+         exit when Result.Success or else Clock >= Deadline;
          delay 0.001;
       end loop;
-      Check (Got and then Msg = Expected, "valid injected frame delivered");
+      Check (Result.Success and then Result.Msg = Expected, "valid injected frame delivered");
    end Expect_Injected;
 
    procedure Await_Saturation (Minimum : Natural);

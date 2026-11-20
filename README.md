@@ -90,19 +90,40 @@ Read `ARCHITECTURE.md` before you change the code.
 
 ## Open decisions (Week 4)
 
-1. `Try_Publish` when a Reliable subscriber is full. Option A (current):
-   partial delivery. The other subscribers get the message, and
-   `Delivered` is False. Option B: all-or-nothing.
-2. Registration is not task-safe. All registration must occur before the
+1. Registration is not task-safe. All registration must occur before the
    first `Publish`. Option A (current): keep this as a documented rule.
    Option B: make the registry a protected object. The in-process demo
    shows the failure: its tasks wait on a `Go` entry before they publish.
-3. `Receive` blocks and has no timeout. Option A (current): keep this.
-   Option B: add `Receive (S, Msg, Timeout, Success)`.
-4. The registry holds `Subscriber'Unchecked_Access`. If a subscriber is
+2. The registry holds `Subscriber'Unchecked_Access`. If a subscriber is
    declared in a scope that ends, the registry holds a dangling access.
    Option A (current): accept this, with the rule "declare subscribers at
    library level". Option B: change the design.
+
+## Receive timeouts
+
+`Receive (S, Msg)` waits until a message arrives and returns the typed message.
+`Receive (S, Timeout, Result)` waits for a message with a timeout in seconds.
+`Try_Receive (S, Result)` checks once without waiting for data.
+Timed and immediate receives return the topic's public `Msg_Result` type.
+
+`Result.Success` is True when `Result.Msg` contains the oldest queued message.
+On timeout or an empty immediate receive, `Result.Success` is False.
+That result has no `Msg` component. A new `Msg_Result` defaults to this empty state.
+Callers can reuse one result variable for timed and immediate receives.
+
+Declare an unconstrained result variable, such as `Result : T.Msg_Result;`.
+Both operations require this variable to be unconstrained.
+The preconditions reject constrained results before a receive can consume a message.
+
+A zero or negative timeout polls once. A queued message returns immediately,
+including with a nonpositive timeout. A successful receive removes exactly one message.
+
+An available message takes precedence over timeout expiry at the final poll.
+The timed overload polls with delays of at most 1 ms.
+This avoids timed entry calls, which Ravenscar and Jorvik prohibit.
+Task scheduling can extend the wait and message-delivery latency.
+
+Timeout and empty immediate receives return normally without raising an exception.
 
 ## Build
 
