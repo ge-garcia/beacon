@@ -75,8 +75,8 @@ procedure Inproc_Demo is
    Readings_Seen  : Natural := 0;
    Commands_Seen  : Natural := 0;
    Last_Reading   : Reading := (0, 0, 0.0);
-   Cmd            : Command;
-   Got            : Boolean;
+   Temp_Result    : Temperature_Topic.Msg_Result;
+   Cmd_Result     : Command_Topic.Msg_Result;
    OK             : Boolean := True;
 
 begin
@@ -88,13 +88,14 @@ begin
    --  Consume slowly on purpose: ~100 Hz against a 1 kHz producer, so
    --  the best-effort queue overflows and we can watch it drop.
    while Clock < Deadline + Milliseconds (50) loop
-      Temperature_Topic.Try_Receive (Temp_Sub, Last_Reading, Got);
-      if Got then
+      Temperature_Topic.Try_Receive (Temp_Sub, Temp_Result);
+      if Temp_Result.Success then
+         Last_Reading := Temp_Result.Msg;
          Readings_Seen := Readings_Seen + 1;
       end if;
       loop
-         Command_Topic.Try_Receive (Cmd_Sub, Cmd, Got);
-         exit when not Got;
+         Command_Topic.Try_Receive (Cmd_Sub, Cmd_Result);
+         exit when not Cmd_Result.Success;
          Commands_Seen := Commands_Seen + 1;
       end loop;
       delay 0.01;
@@ -103,18 +104,14 @@ begin
    --  Producers have stopped. Drain both queues: the best-effort one to
    --  reach the newest reading, the reliable one to count everything.
    loop
-      declare
-         R : Reading;
-      begin
-         Temperature_Topic.Try_Receive (Temp_Sub, R, Got);
-         exit when not Got;
-         Last_Reading := R;
-         Readings_Seen := Readings_Seen + 1;
-      end;
+      Temperature_Topic.Try_Receive (Temp_Sub, Temp_Result);
+      exit when not Temp_Result.Success;
+      Last_Reading := Temp_Result.Msg;
+      Readings_Seen := Readings_Seen + 1;
    end loop;
    loop
-      Command_Topic.Try_Receive (Cmd_Sub, Cmd, Got);
-      exit when not Got;
+      Command_Topic.Try_Receive (Cmd_Sub, Cmd_Result);
+      exit when not Cmd_Result.Success;
       Commands_Seen := Commands_Seen + 1;
    end loop;
 

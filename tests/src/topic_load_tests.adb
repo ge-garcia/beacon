@@ -137,16 +137,15 @@ procedure Topic_Load_Tests is
       end Publisher_Task;
 
       task body Subscriber_Task is
-         Sequence : Natural;
-         Got      : Boolean;
+         Received : T.Msg_Result;
       begin
          accept Go;
          loop
             --  A nonblocking read lets the subscriber stop once the publisher
             --  finishes and the queue is empty.
-            T.Try_Receive (Sub, Sequence, Got);
-            if Got then
-               Progress.Note_Received (Sequence);
+            T.Try_Receive (Sub, Received);
+            if Received.Success then
+               Progress.Note_Received (Received.Msg);
                --  Slow the subscriber so the publisher must wait for queue space.
                delay 0.001;
             else

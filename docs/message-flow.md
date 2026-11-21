@@ -25,7 +25,8 @@ until space becomes available, delaying subscribers later in the loop.
 Main calls `Temperature_Topic.Try_Receive`. This calls protected
 `Try_Pop`, then `Ring.Pop` when nonempty. Pop returns the oldest value,
 advances Head, and decreases Fill. Main uses the returned Reading only
-when Got is True. The message remains typed throughout this path.
+when the result's `Success` is True. The message remains typed throughout
+this path.
 
 ## UDP delivery
 
