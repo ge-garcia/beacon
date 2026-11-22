@@ -35,7 +35,7 @@ jobs:
       - name: Tests
         timeout-minutes: 5
         env:
-          TOPIC_LOAD_SECONDS: "60"
+          TOPIC_LOAD_SECONDS: "15"
         run: alr -n -v test
 
       - name: In-process demo (reliable never drops, best-effort keeps newest)
