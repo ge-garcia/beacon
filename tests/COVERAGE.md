@@ -69,7 +69,7 @@ mean the full M4 coverage exit criterion is not yet satisfied.
 | --- | --- |
 | `queue_tests` | FIFO wraparound, bounded fill, and drop-oldest behavior. |
 | `topic_tests` | Typed fan-out, best-effort overflow, nonblocking operations, and a full Reliable queue blocking `Publish` until `Receive` frees a slot. |
-| `topic_load_tests` | Four independent topics publish concurrently; each Reliable subscriber receives every message in order with no drops after sustained backpressure. The duration defaults to two seconds and CI runs it for 60 seconds. A positive integer argument selects the duration in seconds. |
+| `topic_load_tests` | Four independent topics publish concurrently; each Reliable subscriber receives every message in order with no drops after sustained backpressure. The duration defaults to two seconds and CI runs it for 15 seconds. A positive integer argument selects the duration in seconds. |
 | `wire_tests` | Wire encoding, decoding, CRC, and rejection of invalid frames. |
 | `transport_tests` | Loopback transport delivery, bounds, and full-queue behavior. |
 | `bridge_tests` | Local bridge delivery, frame rejection, sequence gaps, and saturated egress retry. |
